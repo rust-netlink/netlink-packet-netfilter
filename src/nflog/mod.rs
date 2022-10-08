@@ -7,9 +7,10 @@ pub mod nlas;
 use crate::{
     constants::NFNETLINK_V0,
     nflog::nlas::config::ConfigNla,
-    nl::{NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_ACK, NLM_F_REQUEST},
-    NetfilterHeader,
-    NetfilterMessage,
+    nl::{
+        NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_ACK, NLM_F_REQUEST,
+    },
+    NetfilterHeader, NetfilterMessage,
 };
 
 pub fn config_request(
