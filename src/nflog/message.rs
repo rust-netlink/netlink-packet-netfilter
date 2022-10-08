@@ -49,8 +49,8 @@ impl Emitable for NfLogMessage {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> ParseableParametrized<NetfilterBuffer<&'a T>, u8>
-    for NfLogMessage
+impl<'a, T: AsRef<[u8]> + ?Sized>
+    ParseableParametrized<NetfilterBuffer<&'a T>, u8> for NfLogMessage
 {
     fn parse_with_param(
         buf: &NetfilterBuffer<&'a T>,
@@ -58,11 +58,13 @@ impl<'a, T: AsRef<[u8]> + ?Sized> ParseableParametrized<NetfilterBuffer<&'a T>, 
     ) -> Result<Self, DecodeError> {
         Ok(match message_type {
             NFULNL_MSG_CONFIG => {
-                let nlas = buf.parse_all_nlas(|nla_buf| ConfigNla::parse(&nla_buf))?;
+                let nlas =
+                    buf.parse_all_nlas(|nla_buf| ConfigNla::parse(&nla_buf))?;
                 NfLogMessage::Config(nlas)
             }
             NFULNL_MSG_PACKET => {
-                let nlas = buf.parse_all_nlas(|nla_buf| PacketNla::parse(&nla_buf))?;
+                let nlas =
+                    buf.parse_all_nlas(|nla_buf| PacketNla::parse(&nla_buf))?;
                 NfLogMessage::Packet(nlas)
             }
             _ => NfLogMessage::Other {

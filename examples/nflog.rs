@@ -22,8 +22,7 @@ use netlink_packet_netfilter::{
         NfLogMessage,
     },
     nl::{NetlinkMessage, NetlinkPayload},
-    NetfilterMessage,
-    NetfilterMessageInner,
+    NetfilterMessage, NetfilterMessageInner,
 };
 use netlink_sys::{constants::NETLINK_NETFILTER, Socket};
 
@@ -56,11 +55,13 @@ fn main() {
     // And check there is no error
     let size = socket.recv(&mut &mut receive_buffer[..], 0).unwrap();
     let bytes = &receive_buffer[..size];
-    let rx_packet = <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
+    let rx_packet =
+        <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
     println!("<<< {:?}", rx_packet);
     assert!(matches!(rx_packet.payload, NetlinkPayload::Ack(_)));
 
-    // After that we issue a Bind command, to start receiving packets. We can also set various parameters at the same time
+    // After that we issue a Bind command, to start receiving packets. We can
+    // also set various parameters at the same time
     let timeout: Timeout = Duration::from_millis(100).into();
     let packet = config_request(
         AF_INET,
@@ -79,7 +80,8 @@ fn main() {
 
     let size = socket.recv(&mut &mut receive_buffer[..], 0).unwrap();
     let bytes = &receive_buffer[..size];
-    let rx_packet = <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
+    let rx_packet =
+        <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
     println!("<<< {:?}", rx_packet);
     assert!(matches!(rx_packet.payload, NetlinkPayload::Ack(_)));
 
@@ -91,12 +93,18 @@ fn main() {
                 loop {
                     let bytes = &receive_buffer[offset..];
 
-                    let rx_packet = <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
+                    let rx_packet =
+                        <NetlinkMessage<NetfilterMessage>>::deserialize(bytes)
+                            .unwrap();
 
                     for nla in get_packet_nlas(&rx_packet) {
                         if let PacketNla::Payload(payload) = nla {
-                            let src = Ipv4Addr::from(NetworkEndian::read_u32(&payload[12..]));
-                            let dst = Ipv4Addr::from(NetworkEndian::read_u32(&payload[16..]));
+                            let src = Ipv4Addr::from(NetworkEndian::read_u32(
+                                &payload[12..],
+                            ));
+                            let dst = Ipv4Addr::from(NetworkEndian::read_u32(
+                                &payload[16..],
+                            ));
                             println!("Packet from {} to {}", src, dst);
                             break;
                         }

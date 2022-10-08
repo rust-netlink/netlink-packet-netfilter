@@ -6,18 +6,11 @@ use derive_more::{From, IsVariant};
 
 use crate::{
     constants::{
-        NFULA_CFG_CMD,
-        NFULA_CFG_FLAGS,
-        NFULA_CFG_MODE,
-        NFULA_CFG_NLBUFSIZ,
-        NFULA_CFG_QTHRESH,
-        NFULA_CFG_TIMEOUT,
+        NFULA_CFG_CMD, NFULA_CFG_FLAGS, NFULA_CFG_MODE, NFULA_CFG_NLBUFSIZ,
+        NFULA_CFG_QTHRESH, NFULA_CFG_TIMEOUT,
     },
     nflog::nlas::config::{
-        config_mode::ConfigModeBuffer,
-        ConfigCmd,
-        ConfigFlags,
-        ConfigMode,
+        config_mode::ConfigModeBuffer, ConfigCmd, ConfigFlags, ConfigMode,
         Timeout,
     },
     nl::DecodeError,
@@ -68,39 +61,50 @@ impl Nla for ConfigNla {
         match self {
             ConfigNla::Cmd(attr) => attr.emit_value(buffer),
             ConfigNla::Mode(attr) => attr.emit_value(buffer),
-            ConfigNla::NlBufSiz(buf_siz) => BigEndian::write_u32(buffer, *buf_siz),
+            ConfigNla::NlBufSiz(buf_siz) => {
+                BigEndian::write_u32(buffer, *buf_siz)
+            }
             ConfigNla::Timeout(attr) => attr.emit_value(buffer),
-            ConfigNla::QThresh(q_thresh) => BigEndian::write_u32(buffer, *q_thresh),
+            ConfigNla::QThresh(q_thresh) => {
+                BigEndian::write_u32(buffer, *q_thresh)
+            }
             ConfigNla::Flags(attr) => attr.emit_value(buffer),
             ConfigNla::Other(attr) => attr.emit_value(buffer),
         }
     }
 }
 
-impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>> for ConfigNla {
+impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
+    for ConfigNla
+{
     fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
         let kind = buf.kind();
         let payload = buf.value();
         let nla = match kind {
-            NFULA_CFG_CMD => {
-                ConfigCmd::from(parse_u8(payload).context("invalid NFULA_CFG_CMD value")?).into()
-            }
+            NFULA_CFG_CMD => ConfigCmd::from(
+                parse_u8(payload).context("invalid NFULA_CFG_CMD value")?,
+            )
+            .into(),
             NFULA_CFG_MODE => {
                 let buf = ConfigModeBuffer::new_checked(payload)?;
                 ConfigMode::parse(&buf)?.into()
             }
             NFULA_CFG_NLBUFSIZ => ConfigNla::NlBufSiz(
-                parse_u32_be(payload).context("invalid NFULA_CFG_NLBUFSIZ value")?,
+                parse_u32_be(payload)
+                    .context("invalid NFULA_CFG_NLBUFSIZ value")?,
             ),
-            NFULA_CFG_TIMEOUT => {
-                Timeout::new(parse_u32_be(payload).context("invalid NFULA_CFG_TIMEOUT value")?)
-                    .into()
-            }
+            NFULA_CFG_TIMEOUT => Timeout::new(
+                parse_u32_be(payload)
+                    .context("invalid NFULA_CFG_TIMEOUT value")?,
+            )
+            .into(),
             NFULA_CFG_QTHRESH => ConfigNla::QThresh(
-                parse_u32_be(payload).context("invalid NFULA_CFG_QTHRESH value")?,
+                parse_u32_be(payload)
+                    .context("invalid NFULA_CFG_QTHRESH value")?,
             ),
             NFULA_CFG_FLAGS => ConfigFlags::from_bits_preserve(
-                parse_u16_be(payload).context("invalid NFULA_CFG_FLAGS value")?,
+                parse_u16_be(payload)
+                    .context("invalid NFULA_CFG_FLAGS value")?,
             )
             .into(),
             _ => ConfigNla::Other(DefaultNla::parse(buf)?),

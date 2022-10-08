@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    message::{NetfilterHeader, NetfilterMessage, NetfilterMessageInner, NETFILTER_HEADER_LEN},
+    message::{
+        NetfilterHeader, NetfilterMessage, NetfilterMessageInner,
+        NETFILTER_HEADER_LEN,
+    },
     nflog::NfLogMessage,
     traits::{Parseable, ParseableParametrized},
     DecodeError,
@@ -18,7 +21,9 @@ buffer!(NetfilterBuffer(NETFILTER_HEADER_LEN) {
 });
 
 impl<'a, T: AsRef<[u8]> + ?Sized> NetfilterBuffer<&'a T> {
-    pub fn nlas(&self) -> impl Iterator<Item = Result<NlaBuffer<&'a [u8]>, DecodeError>> {
+    pub fn nlas(
+        &self,
+    ) -> impl Iterator<Item = Result<NlaBuffer<&'a [u8]>, DecodeError>> {
         NlasIterator::new(self.payload())
     }
 
@@ -38,16 +43,17 @@ impl<'a, T: AsRef<[u8]> + ?Sized> NetfilterBuffer<&'a T> {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> ParseableParametrized<NetfilterBuffer<&'a T>, u16>
-    for NetfilterMessage
+impl<'a, T: AsRef<[u8]> + ?Sized>
+    ParseableParametrized<NetfilterBuffer<&'a T>, u16> for NetfilterMessage
 {
     fn parse_with_param(
         buf: &NetfilterBuffer<&'a T>,
         message_type: u16,
     ) -> Result<Self, DecodeError> {
-        let header_buf = crate::message::NetfilterHeaderBuffer::new(buf.inner());
-        let header =
-            NetfilterHeader::parse(&header_buf).context("failed to parse netfilter header")?;
+        let header_buf =
+            crate::message::NetfilterHeaderBuffer::new(buf.inner());
+        let header = NetfilterHeader::parse(&header_buf)
+            .context("failed to parse netfilter header")?;
         let subsys = (message_type >> 8) as u8;
         let message_type = message_type as u8;
         let inner = match subsys {

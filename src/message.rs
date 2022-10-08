@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    DecodeError,
-    NetlinkDeserializable,
-    NetlinkHeader,
-    NetlinkPayload,
+    DecodeError, NetlinkDeserializable, NetlinkHeader, NetlinkPayload,
     NetlinkSerializable,
 };
-use netlink_packet_utils::{buffer, nla::DefaultNla, Emitable, Parseable, ParseableParametrized};
+use netlink_packet_utils::{
+    buffer, nla::DefaultNla, Emitable, Parseable, ParseableParametrized,
+};
 
 use crate::{buffer::NetfilterBuffer, nflog::NfLogMessage};
 
@@ -80,14 +79,18 @@ impl Emitable for NetfilterMessageInner {
     fn buffer_len(&self) -> usize {
         match self {
             NetfilterMessageInner::NfLog(message) => message.buffer_len(),
-            NetfilterMessageInner::Other { nlas, .. } => nlas.as_slice().buffer_len(),
+            NetfilterMessageInner::Other { nlas, .. } => {
+                nlas.as_slice().buffer_len()
+            }
         }
     }
 
     fn emit(&self, buffer: &mut [u8]) {
         match self {
             NetfilterMessageInner::NfLog(message) => message.emit(buffer),
-            NetfilterMessageInner::Other { nlas, .. } => nlas.as_slice().emit(buffer),
+            NetfilterMessageInner::Other { nlas, .. } => {
+                nlas.as_slice().emit(buffer)
+            }
         }
     }
 }
@@ -99,7 +102,10 @@ pub struct NetfilterMessage {
 }
 
 impl NetfilterMessage {
-    pub fn new<T: Into<NetfilterMessageInner>>(header: NetfilterHeader, inner: T) -> Self {
+    pub fn new<T: Into<NetfilterMessageInner>>(
+        header: NetfilterHeader,
+        inner: T,
+    ) -> Self {
         Self {
             header,
             inner: inner.into(),
@@ -148,10 +154,16 @@ impl NetlinkSerializable for NetfilterMessage {
 
 impl NetlinkDeserializable for NetfilterMessage {
     type Error = DecodeError;
-    fn deserialize(header: &NetlinkHeader, payload: &[u8]) -> Result<Self, Self::Error> {
+    fn deserialize(
+        header: &NetlinkHeader,
+        payload: &[u8],
+    ) -> Result<Self, Self::Error> {
         match NetfilterBuffer::new_checked(payload) {
             Err(e) => Err(e),
-            Ok(buffer) => match NetfilterMessage::parse_with_param(&buffer, header.message_type) {
+            Ok(buffer) => match NetfilterMessage::parse_with_param(
+                &buffer,
+                header.message_type,
+            ) {
                 Err(e) => Err(e),
                 Ok(message) => Ok(message),
             },

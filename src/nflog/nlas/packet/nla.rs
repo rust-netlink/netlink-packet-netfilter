@@ -8,23 +8,10 @@ use derive_more::{From, IsVariant};
 
 use crate::{
     constants::{
-        NFULA_GID,
-        NFULA_HWADDR,
-        NFULA_HWHEADER,
-        NFULA_HWLEN,
-        NFULA_HWTYPE,
-        NFULA_IFINDEX_INDEV,
-        NFULA_IFINDEX_OUTDEV,
-        NFULA_IFINDEX_PHYSINDEV,
-        NFULA_IFINDEX_PHYSOUTDEV,
-        NFULA_MARK,
-        NFULA_PACKET_HDR,
-        NFULA_PAYLOAD,
-        NFULA_PREFIX,
-        NFULA_SEQ,
-        NFULA_SEQ_GLOBAL,
-        NFULA_TIMESTAMP,
-        NFULA_UID,
+        NFULA_GID, NFULA_HWADDR, NFULA_HWHEADER, NFULA_HWLEN, NFULA_HWTYPE,
+        NFULA_IFINDEX_INDEV, NFULA_IFINDEX_OUTDEV, NFULA_IFINDEX_PHYSINDEV,
+        NFULA_IFINDEX_PHYSOUTDEV, NFULA_MARK, NFULA_PACKET_HDR, NFULA_PAYLOAD,
+        NFULA_PREFIX, NFULA_SEQ, NFULA_SEQ_GLOBAL, NFULA_TIMESTAMP, NFULA_UID,
     },
     nflog::nlas::packet::{
         hw_addr::{HwAddr, HwAddrBuffer},
@@ -115,26 +102,40 @@ impl Nla for PacketNla {
             PacketNla::PacketHdr(attr) => attr.emit_value(buffer),
             PacketNla::Mark(value) => BigEndian::write_u32(buffer, *value),
             PacketNla::Timestamp(attr) => attr.emit_value(buffer),
-            PacketNla::IfIndexInDev(value) => BigEndian::write_u32(buffer, *value),
-            PacketNla::IfIndexOutDev(value) => BigEndian::write_u32(buffer, *value),
-            PacketNla::IfIndexPhysInDev(value) => BigEndian::write_u32(buffer, *value),
-            PacketNla::IfIndexPhysOutDev(value) => BigEndian::write_u32(buffer, *value),
+            PacketNla::IfIndexInDev(value) => {
+                BigEndian::write_u32(buffer, *value)
+            }
+            PacketNla::IfIndexOutDev(value) => {
+                BigEndian::write_u32(buffer, *value)
+            }
+            PacketNla::IfIndexPhysInDev(value) => {
+                BigEndian::write_u32(buffer, *value)
+            }
+            PacketNla::IfIndexPhysOutDev(value) => {
+                BigEndian::write_u32(buffer, *value)
+            }
             PacketNla::HwAddr(attr) => attr.emit_value(buffer),
             PacketNla::Payload(vec) => buffer.copy_from_slice(vec),
-            PacketNla::Prefix(cstring) => buffer.copy_from_slice(cstring.as_bytes_with_nul()),
+            PacketNla::Prefix(cstring) => {
+                buffer.copy_from_slice(cstring.as_bytes_with_nul())
+            }
             PacketNla::Uid(value) => BigEndian::write_u32(buffer, *value),
             PacketNla::Seq(value) => BigEndian::write_u32(buffer, *value),
             PacketNla::SeqGlobal(value) => BigEndian::write_u32(buffer, *value),
             PacketNla::Gid(value) => BigEndian::write_u32(buffer, *value),
             PacketNla::HwType(value) => BigEndian::write_u16(buffer, *value),
             PacketNla::HwHeader(vec) => buffer.copy_from_slice(vec),
-            PacketNla::HwHeaderLen(value) => BigEndian::write_u16(buffer, *value),
+            PacketNla::HwHeaderLen(value) => {
+                BigEndian::write_u16(buffer, *value)
+            }
             PacketNla::Other(attr) => attr.emit_value(buffer),
         }
     }
 }
 
-impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>> for PacketNla {
+impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
+    for PacketNla
+{
     fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
         let kind = buf.kind();
         let payload = buf.value();
@@ -145,29 +146,33 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>> for Pack
                 PacketHdr::parse(&buf)?.into()
             }
 
-            NFULA_MARK => {
-                PacketNla::Mark(parse_u32_be(payload).context("invalid NFULA_MARK value")?)
-            }
+            NFULA_MARK => PacketNla::Mark(
+                parse_u32_be(payload).context("invalid NFULA_MARK value")?,
+            ),
             NFULA_TIMESTAMP => {
                 let buf = TimeStampBuffer::new_checked(&payload)
                     .context("invalid NFULA_TIMESTAMP value")?;
                 PacketNla::Timestamp(TimeStamp::parse(&buf)?)
             }
             NFULA_IFINDEX_INDEV => PacketNla::IfIndexInDev(
-                parse_u32_be(payload).context("invalid NFULA_IFINDEX_INDEV value")?,
+                parse_u32_be(payload)
+                    .context("invalid NFULA_IFINDEX_INDEV value")?,
             ),
             NFULA_IFINDEX_OUTDEV => PacketNla::IfIndexOutDev(
-                parse_u32_be(payload).context("invalid NFULA_IFINDEX_OUTDEV value")?,
+                parse_u32_be(payload)
+                    .context("invalid NFULA_IFINDEX_OUTDEV value")?,
             ),
             NFULA_IFINDEX_PHYSINDEV => PacketNla::IfIndexPhysInDev(
-                parse_u32_be(payload).context("invalid NFULA_IFINDEX_PHYSINDEV value")?,
+                parse_u32_be(payload)
+                    .context("invalid NFULA_IFINDEX_PHYSINDEV value")?,
             ),
             NFULA_IFINDEX_PHYSOUTDEV => PacketNla::IfIndexPhysOutDev(
-                parse_u32_be(payload).context("invalid NFULA_IFINDEX_PHYSOUTDEV value")?,
+                parse_u32_be(payload)
+                    .context("invalid NFULA_IFINDEX_PHYSOUTDEV value")?,
             ),
             NFULA_HWADDR => {
-                let buf =
-                    HwAddrBuffer::new_checked(payload).context("invalid NFULA_HWADDR value")?;
+                let buf = HwAddrBuffer::new_checked(payload)
+                    .context("invalid NFULA_HWADDR value")?;
                 PacketNla::HwAddr(HwAddr::parse(&buf)?)
             }
             NFULA_PAYLOAD => PacketNla::Payload(payload.to_vec()),
@@ -176,19 +181,26 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>> for Pack
                     .context("invalid NFULA_PREFIX value")?
                     .to_owned(),
             ),
-            NFULA_UID => PacketNla::Uid(parse_u32_be(payload).context("invalid NFULA_UID value")?),
-            NFULA_SEQ => PacketNla::Seq(parse_u32_be(payload).context("invalid NFULA_SEQ value")?),
-            NFULA_SEQ_GLOBAL => PacketNla::SeqGlobal(
-                parse_u32_be(payload).context("invalid NFULA_SEQ_GLOBAL value")?,
+            NFULA_UID => PacketNla::Uid(
+                parse_u32_be(payload).context("invalid NFULA_UID value")?,
             ),
-            NFULA_GID => PacketNla::Gid(parse_u32_be(payload).context("invalid NFULA_GID value")?),
-            NFULA_HWTYPE => {
-                PacketNla::HwType(parse_u16_be(payload).context("invalid NFULA_HWTYPE value")?)
-            }
+            NFULA_SEQ => PacketNla::Seq(
+                parse_u32_be(payload).context("invalid NFULA_SEQ value")?,
+            ),
+            NFULA_SEQ_GLOBAL => PacketNla::SeqGlobal(
+                parse_u32_be(payload)
+                    .context("invalid NFULA_SEQ_GLOBAL value")?,
+            ),
+            NFULA_GID => PacketNla::Gid(
+                parse_u32_be(payload).context("invalid NFULA_GID value")?,
+            ),
+            NFULA_HWTYPE => PacketNla::HwType(
+                parse_u16_be(payload).context("invalid NFULA_HWTYPE value")?,
+            ),
             NFULA_HWHEADER => PacketNla::HwHeader(payload.to_vec()),
-            NFULA_HWLEN => {
-                PacketNla::HwHeaderLen(parse_u16_be(payload).context("invalid NFULA_HWLEN value")?)
-            }
+            NFULA_HWLEN => PacketNla::HwHeaderLen(
+                parse_u16_be(payload).context("invalid NFULA_HWLEN value")?,
+            ),
 
             _ => PacketNla::Other(DefaultNla::parse(buf)?),
         };

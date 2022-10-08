@@ -20,7 +20,8 @@ impl Timeout {
 
 impl From<Duration> for Timeout {
     fn from(duration: Duration) -> Self {
-        let hundredth = (duration.as_millis() / 10).try_into().unwrap_or(u32::MAX);
+        let hundredth =
+            (duration.as_millis() / 10).try_into().unwrap_or(u32::MAX);
         Self { hundredth }
     }
 }
