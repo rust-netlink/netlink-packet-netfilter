@@ -58,7 +58,9 @@ fn main() {
     let rx_packet =
         <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
     println!("<<< {:?}", rx_packet);
-    assert!(matches!(rx_packet.payload, NetlinkPayload::Ack(_)));
+    assert!(
+        matches!(rx_packet.payload, NetlinkPayload::Error(e) if e.code.is_none())
+    );
 
     // After that we issue a Bind command, to start receiving packets. We can
     // also set various parameters at the same time
@@ -83,7 +85,9 @@ fn main() {
     let rx_packet =
         <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
     println!("<<< {:?}", rx_packet);
-    assert!(matches!(rx_packet.payload, NetlinkPayload::Ack(_)));
+    assert!(
+        matches!(rx_packet.payload, NetlinkPayload::Error(e) if e.code.is_none())
+    );
 
     // And now we can receive the packets
     loop {

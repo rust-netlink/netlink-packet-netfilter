@@ -18,16 +18,15 @@ pub fn config_request(
     group_num: u16,
     nlas: Vec<ConfigNla>,
 ) -> NetlinkMessage<NetfilterMessage> {
-    let mut message = NetlinkMessage {
-        header: NetlinkHeader {
-            flags: NLM_F_REQUEST | NLM_F_ACK,
-            ..Default::default()
-        },
-        payload: NetlinkPayload::from(NetfilterMessage::new(
+    let mut header = NetlinkHeader::default();
+    header.flags = NLM_F_REQUEST | NLM_F_ACK;
+    let mut message = NetlinkMessage::new(
+        header,
+        NetlinkPayload::from(NetfilterMessage::new(
             NetfilterHeader::new(family, NFNETLINK_V0, group_num),
             NfLogMessage::Config(nlas),
         )),
-    };
+    );
     message.finalize();
     message
 }
