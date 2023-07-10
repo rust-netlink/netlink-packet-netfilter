@@ -6,6 +6,12 @@ use anyhow::Context;
 use byteorder::{BigEndian, ByteOrder};
 use derive_more::{From, IsVariant};
 
+use netlink_packet_utils::{
+    nla::{DefaultNla, Nla, NlaBuffer},
+    parsers::{parse_u16_be, parse_u32_be},
+    DecodeError, Parseable,
+};
+
 use crate::{
     constants::{
         NFULA_GID, NFULA_HWADDR, NFULA_HWHEADER, NFULA_HWLEN, NFULA_HWTYPE,
@@ -18,10 +24,6 @@ use crate::{
         packet_hdr::{PacketHdr, PacketHdrBuffer},
         timestamp::{TimeStamp, TimeStampBuffer},
     },
-    nla::{DefaultNla, Nla, NlaBuffer},
-    traits::Parseable,
-    utils::parsers::{parse_u16_be, parse_u32_be},
-    DecodeError,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, From, IsVariant)]

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-use crate::{
-    constants::NFULA_HWADDR, nla::Nla, traits::Parseable, utils::buffer,
-    DecodeError,
-};
+use netlink_packet_utils::{buffer, nla::Nla, DecodeError, Parseable};
+
+use crate::constants::NFULA_HWADDR;
 
 const HW_ADDR_LEN: usize = 12;
 

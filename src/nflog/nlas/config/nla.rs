@@ -3,6 +3,11 @@
 use anyhow::Context;
 use byteorder::{BigEndian, ByteOrder};
 use derive_more::{From, IsVariant};
+use netlink_packet_utils::{
+    nla::{DefaultNla, Nla, NlaBuffer},
+    parsers::{parse_u16_be, parse_u32_be, parse_u8},
+    DecodeError, Parseable,
+};
 
 use crate::{
     constants::{
@@ -13,10 +18,6 @@ use crate::{
         config_mode::ConfigModeBuffer, ConfigCmd, ConfigFlags, ConfigMode,
         Timeout,
     },
-    nl::DecodeError,
-    nla::{DefaultNla, Nla, NlaBuffer},
-    traits::Parseable,
-    utils::parsers::{parse_u16_be, parse_u32_be, parse_u8},
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, From, IsVariant)]
