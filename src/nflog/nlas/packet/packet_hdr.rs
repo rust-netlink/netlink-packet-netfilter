@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-use netlink_packet_core::DecodeError;
-use netlink_packet_utils::{buffer, nla::Nla, Parseable};
+use netlink_packet_utils::{buffer, nla::Nla, DecodeError, Parseable};
 
 const PACKET_HDR_LEN: usize = 4;
 pub const NFULA_PACKET_HDR: u16 = libc::NFULA_PACKET_HDR as u16;

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 
+use netlink_packet_utils::{
+    nla::DefaultNla, DecodeError, Emitable, Parseable, ParseableParametrized,
+};
+
 use crate::{
     buffer::NetfilterBuffer,
     constants::{NFNL_SUBSYS_ULOG, NFULNL_MSG_CONFIG, NFULNL_MSG_PACKET},
     nflog::nlas::{config::ConfigNla, packet::PacketNla},
-    nla::DefaultNla,
-    traits::{Emitable, Parseable, ParseableParametrized},
-    DecodeError,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]

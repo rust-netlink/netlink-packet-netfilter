@@ -2,15 +2,14 @@
 
 // To run this example:
 //   1) create a iptables/nft rules that send packet with group 1, for example:
-//          sudo iptables -A INPUT -j NFLOG --nflog-group 1
-//   2) build the example:
-//          cargo build --example nflog
-//   3) run it as root:
-//          sudo ../target/debug/examples/nflog
+//      sudo iptables -A INPUT -j NFLOG --nflog-group 1
+//   2) build the example: cargo build --example nflog
+//   3) run it as root: sudo ../target/debug/examples/nflog
 
 use std::{net::Ipv4Addr, time::Duration};
 
 use byteorder::{ByteOrder, NetworkEndian};
+use netlink_packet_core::{NetlinkMessage, NetlinkPayload};
 use netlink_packet_netfilter::{
     constants::*,
     nflog::{
@@ -21,7 +20,6 @@ use netlink_packet_netfilter::{
         },
         NfLogMessage,
     },
-    nl::{NetlinkMessage, NetlinkPayload},
     NetfilterMessage, NetfilterMessageInner,
 };
 use netlink_sys::{constants::NETLINK_NETFILTER, Socket};
@@ -58,7 +56,10 @@ fn main() {
     let rx_packet =
         <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
     println!("<<< {:?}", rx_packet);
-    assert!(matches!(rx_packet.payload, NetlinkPayload::Ack(_)));
+    assert!(matches!(rx_packet.payload, NetlinkPayload::Error(_)));
+    if let NetlinkPayload::Error(e) = rx_packet.payload {
+        assert_eq!(e.code, None);
+    }
 
     // After that we issue a Bind command, to start receiving packets. We can
     // also set various parameters at the same time
@@ -83,7 +84,10 @@ fn main() {
     let rx_packet =
         <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
     println!("<<< {:?}", rx_packet);
-    assert!(matches!(rx_packet.payload, NetlinkPayload::Ack(_)));
+    assert!(matches!(rx_packet.payload, NetlinkPayload::Error(_)));
+    if let NetlinkPayload::Error(e) = rx_packet.payload {
+        assert_eq!(e.code, None);
+    }
 
     // And now we can receive the packets
     loop {

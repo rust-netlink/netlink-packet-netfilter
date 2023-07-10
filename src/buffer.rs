@@ -6,13 +6,12 @@ use crate::{
         NETFILTER_HEADER_LEN,
     },
     nflog::NfLogMessage,
-    traits::{Parseable, ParseableParametrized},
-    DecodeError,
 };
 use anyhow::Context;
 use netlink_packet_utils::{
     buffer,
     nla::{DefaultNla, NlaBuffer, NlasIterator},
+    DecodeError, Parseable, ParseableParametrized,
 };
 
 buffer!(NetfilterBuffer(NETFILTER_HEADER_LEN) {
