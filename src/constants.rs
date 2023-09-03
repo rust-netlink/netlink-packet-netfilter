@@ -88,3 +88,72 @@ pub const NFULA_CT_INFO: u16 = libc::NFULA_CT_INFO as u16;
 
 pub const NFULNL_MSG_CONFIG: u8 = libc::NFULNL_MSG_CONFIG as u8;
 pub const NFULNL_MSG_PACKET: u8 = libc::NFULNL_MSG_PACKET as u8;
+
+pub const NFQA_UNSPEC: u16 = libc::NFQA_UNSPEC as u16;
+pub const NFQA_PACKET_HDR: u16 = libc::NFQA_PACKET_HDR as u16;
+pub const NFQA_VERDICT_HDR: u16 = libc::NFQA_VERDICT_HDR as u16;
+pub const NFQA_MARK: u16 = libc::NFQA_MARK as u16;
+pub const NFQA_TIMESTAMP: u16 = libc::NFQA_TIMESTAMP as u16;
+pub const NFQA_IFINDEX_INDEV: u16 = libc::NFQA_IFINDEX_INDEV as u16;
+pub const NFQA_IFINDEX_OUTDEV: u16 = libc::NFQA_IFINDEX_OUTDEV as u16;
+pub const NFQA_IFINDEX_PHYSINDEV: u16 = libc::NFQA_IFINDEX_PHYSINDEV as u16;
+pub const NFQA_IFINDEX_PHYSOUTDEV: u16 = libc::NFQA_IFINDEX_PHYSOUTDEV as u16;
+pub const NFQA_HWADDR: u16 = libc::NFQA_HWADDR as u16;
+pub const NFQA_PAYLOAD: u16 = libc::NFQA_PAYLOAD as u16;
+pub const NFQA_CT: u16 = libc::NFQA_CT as u16;
+pub const NFQA_CT_INFO: u16 = libc::NFQA_CT_INFO as u16;
+pub const NFQA_CAP_LEN: u16 = libc::NFQA_CAP_LEN as u16;
+pub const NFQA_SKB_INFO: u16 = libc::NFQA_SKB_INFO as u16;
+pub const NFQA_EXP: u16 = libc::NFQA_EXP as u16;
+pub const NFQA_UID: u16 = libc::NFQA_UID as u16;
+pub const NFQA_GID: u16 = libc::NFQA_GID as u16;
+pub const NFQA_SECCTX: u16 = libc::NFQA_SECCTX as u16;
+pub const NFQA_VLAN: u16 = libc::NFQA_VLAN as u16;
+pub const NFQA_L2HDR: u16 = libc::NFQA_L2HDR as u16;
+pub const NFQA_PRIORITY: u16 = libc::NFQA_PRIORITY as u16;
+
+pub const NFQA_VLAN_UNSPEC: u16 = libc::NFQA_VLAN_UNSPEC as u16;
+pub const NFQA_VLAN_PROTO: u16 = libc::NFQA_VLAN_PROTO as u16;
+pub const NFQA_VLAN_TCI: u16 = libc::NFQA_VLAN_TCI as u16;
+
+pub const NFQNL_CFG_CMD_NONE: u8 = libc::NFQNL_CFG_CMD_NONE as u8;
+pub const NFQNL_CFG_CMD_BIND: u8 = libc::NFQNL_CFG_CMD_BIND as u8;
+pub const NFQNL_CFG_CMD_UNBIND: u8 = libc::NFQNL_CFG_CMD_UNBIND as u8;
+pub const NFQNL_CFG_CMD_PF_BIND: u8 = libc::NFQNL_CFG_CMD_PF_BIND as u8;
+pub const NFQNL_CFG_CMD_PF_UNBIND: u8 = libc::NFQNL_CFG_CMD_PF_UNBIND as u8;
+
+pub const NFQNL_COPY_NONE: u8 = libc::NFQNL_COPY_NONE as u8;
+pub const NFQNL_COPY_META: u8 = libc::NFQNL_COPY_META as u8;
+pub const NFQNL_COPY_PACKET: u8 = libc::NFQNL_COPY_PACKET as u8;
+
+pub const NFQA_CFG_UNSPEC: u16 = libc::NFQA_CFG_UNSPEC as u16;
+pub const NFQA_CFG_CMD: u16 = libc::NFQA_CFG_CMD as u16;
+pub const NFQA_CFG_PARAMS: u16 = libc::NFQA_CFG_PARAMS as u16;
+pub const NFQA_CFG_QUEUE_MAXLEN: u16 = libc::NFQA_CFG_QUEUE_MAXLEN as u16;
+pub const NFQA_CFG_MASK: u16 = libc::NFQA_CFG_MASK as u16;
+pub const NFQA_CFG_FLAGS: u16 = libc::NFQA_CFG_FLAGS as u16;
+
+pub const NFQA_CFG_F_FAIL_OPEN: u32 = libc::NFQA_CFG_F_FAIL_OPEN as u32;
+pub const NFQA_CFG_F_CONNTRACK: u32 = libc::NFQA_CFG_F_CONNTRACK as u32;
+pub const NFQA_CFG_F_GSO: u32 = libc::NFQA_CFG_F_GSO as u32;
+pub const NFQA_CFG_F_UID_GID: u32 = libc::NFQA_CFG_F_UID_GID as u32;
+pub const NFQA_CFG_F_SECCTX: u32 = libc::NFQA_CFG_F_SECCTX as u32;
+pub const NFQA_CFG_F_MAX: u32 = libc::NFQA_CFG_F_MAX as u32;
+
+pub const NFQA_SKB_CSUMNOTREADY: u32 = libc::NFQA_SKB_CSUMNOTREADY as u32;
+pub const NFQA_SKB_GSO: u32 = libc::NFQA_SKB_GSO as u32;
+pub const NFQA_SKB_CSUM_NOTVERIFIED: u32 =
+    libc::NFQA_SKB_CSUM_NOTVERIFIED as u32;
+
+pub const NFQNL_MSG_PACKET: u8 = libc::NFQNL_MSG_PACKET as u8;
+pub const NFQNL_MSG_VERDICT: u8 = libc::NFQNL_MSG_VERDICT as u8;
+pub const NFQNL_MSG_CONFIG: u8 = libc::NFQNL_MSG_CONFIG as u8;
+pub const NFQNL_MSG_VERDICT_BATCH: u8 = libc::NFQNL_MSG_VERDICT_BATCH as u8;
+
+pub const NF_DROP: u32 = libc::NF_DROP as u32;
+pub const NF_ACCEPT: u32 = libc::NF_ACCEPT as u32;
+pub const NF_STOLEN: u32 = libc::NF_STOLEN as u32;
+pub const NF_QUEUE: u32 = libc::NF_QUEUE as u32;
+pub const NF_REPEAT: u32 = libc::NF_REPEAT as u32;
+pub const NF_STOP: u32 = libc::NF_STOP as u32;
+pub const NF_MAX_VERDICT: u32 = libc::NF_MAX_VERDICT as u32;
