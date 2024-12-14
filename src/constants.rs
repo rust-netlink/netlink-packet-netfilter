@@ -88,3 +88,180 @@ pub const NFULA_CT_INFO: u16 = libc::NFULA_CT_INFO as u16;
 
 pub const NFULNL_MSG_CONFIG: u8 = libc::NFULNL_MSG_CONFIG as u8;
 pub const NFULNL_MSG_PACKET: u8 = libc::NFULNL_MSG_PACKET as u8;
+
+// netflter/nfnetlink_conntrack.h
+// There is no definitions in rust-lang/libc
+pub const IPCTNL_MSG_CT_NEW: u8 = 0;
+pub const IPCTNL_MSG_CT_GET: u8 = 1;
+pub const IPCTNL_MSG_CT_DELETE: u8 = 2;
+pub const IPCTNL_MSG_CT_GET_CTRZERO: u8 = 3;
+pub const IPCTNL_MSG_CT_GET_STATS_CPU: u8 = 4;
+pub const IPCTNL_MSG_CT_GET_STATS: u8 = 5;
+pub const IPCTNL_MSG_CT_DYING: u8 = 6;
+pub const IPCTNL_MSG_CT_GET_UNCONFIRMED: u8 = 7;
+
+pub const CTA_UNSPEC: u16 = 0;
+pub const CTA_TUPLE_ORIG: u16 = 1;
+pub const CTA_TUPLE_REPLY: u16 = 2;
+pub const CTA_STATUS: u16 = 3;
+pub const CTA_PROTOINFO: u16 = 4;
+pub const CTA_HELP: u16 = 5;
+pub const CTA_NAT_SRC: u16 = 6;
+pub const CTA_NAT: u16 = CTA_NAT_SRC; /* backwards compatibility */
+pub const CTA_TIMEOUT: u16 = 7;
+pub const CTA_MARK: u16 = 8;
+pub const CTA_COUNTERS_ORIG: u16 = 9;
+pub const CTA_COUNTERS_REPLY: u16 = 10;
+pub const CTA_USE: u16 = 11;
+pub const CTA_ID: u16 = 12;
+pub const CTA_NAT_DST: u16 = 13;
+pub const CTA_TUPLE_MASTER: u16 = 14;
+pub const CTA_SEQ_ADJ_ORIG: u16 = 15;
+pub const CTA_NAT_SEQ_ADJ_ORIG: u16 = CTA_SEQ_ADJ_ORIG;
+pub const CTA_SEQ_ADJ_REPLY: u16 = 16;
+pub const CTA_NAT_SEQ_ADJ_REPLY: u16 = CTA_SEQ_ADJ_REPLY;
+pub const CTA_SECMARK: u16 = 17; /* obsolete */
+pub const CTA_ZONE: u16 = 18;
+pub const CTA_SECCTX: u16 = 19;
+pub const CTA_TIMESTAMP: u16 = 20;
+pub const CTA_MARK_MASK: u16 = 21;
+pub const CTA_LABELS: u16 = 22;
+pub const CTA_LABELS_MASK: u16 = 23;
+pub const CTA_SYNPROXY: u16 = 24;
+pub const CTA_FILTER: u16 = 25;
+pub const CTA_STATUS_MASK: u16 = 26;
+
+pub const CTA_TUPLE_UNSPEC: u16 = 0;
+pub const CTA_TUPLE_IP: u16 = 1;
+pub const CTA_TUPLE_PROTO: u16 = 2;
+pub const CTA_TUPLE_ZONE: u16 = 3;
+
+pub const CTA_IP_UNSPEC: u16 = 0;
+pub const CTA_IP_V4_SRC: u16 = 1;
+pub const CTA_IP_V4_DST: u16 = 2;
+pub const CTA_IP_V6_SRC: u16 = 3;
+pub const CTA_IP_V6_DST: u16 = 4;
+
+pub const CTA_PROTO_UNSPEC: u16 = 0;
+pub const CTA_PROTO_NUM: u16 = 1;
+pub const CTA_PROTO_SRC_PORT: u16 = 2;
+pub const CTA_PROTO_DST_PORT: u16 = 3;
+pub const CTA_PROTO_ICMP_ID: u16 = 4;
+pub const CTA_PROTO_ICMP_TYPE: u16 = 5;
+pub const CTA_PROTO_ICMP_CODE: u16 = 6;
+pub const CTA_PROTO_ICMPV6_ID: u16 = 7;
+pub const CTA_PROTO_ICMPV6_TYPE: u16 = 8;
+pub const CTA_PROTO_ICMPV6_CODE: u16 = 9;
+
+pub const CTA_PROTOINFO_UNSPEC: u16 = 0;
+pub const CTA_PROTOINFO_TCP: u16 = 1;
+pub const CTA_PROTOINFO_DCCP: u16 = 2;
+pub const CTA_PROTOINFO_SCTP: u16 = 3;
+
+pub const CTA_PROTOINFO_TCP_UNSPEC: u16 = 0;
+pub const CTA_PROTOINFO_TCP_STATE: u16 = 1;
+pub const CTA_PROTOINFO_TCP_WSCALE_ORIGINAL: u16 = 2;
+pub const CTA_PROTOINFO_TCP_WSCALE_REPLY: u16 = 3;
+pub const CTA_PROTOINFO_TCP_FLAGS_ORIGINAL: u16 = 4;
+pub const CTA_PROTOINFO_TCP_FLAGS_REPLY: u16 = 5;
+
+pub const CTA_PROTOINFO_DCCP_UNSPEC: u16 = 0;
+pub const CTA_PROTOINFO_DCCP_STATE: u16 = 1;
+pub const CTA_PROTOINFO_DCCP_ROLE: u16 = 2;
+pub const CTA_PROTOINFO_DCCP_HANDSHAKE_SEQ: u16 = 3;
+pub const CTA_PROTOINFO_DCCP_PAD: u16 = 4;
+
+pub const CTA_PROTOINFO_SCTP_UNSPEC: u16 = 0;
+pub const CTA_PROTOINFO_SCTP_STATE: u16 = 1;
+pub const CTA_PROTOINFO_SCTP_VTAG_ORIGINAL: u16 = 2;
+pub const CTA_PROTOINFO_SCTP_VTAG_REPLY: u16 = 3;
+
+pub const CTA_COUNTERS_UNSPEC: u8 = 0;
+pub const CTA_COUNTERS_PACKETS: u8 = 1; /* 64bit counters */
+pub const CTA_COUNTERS_BYTES: u8 = 2; /* 64bit counters */
+pub const CTA_COUNTERS32_PACKETS: u8 = 3; /* old 32bit counters, unused */
+pub const CTA_COUNTERS32_BYTES: u8 = 4; /* old 32bit counters, unused */
+pub const CTA_COUNTERS_PAD: u8 = 5;
+
+pub const CTA_TIMESTAMP_UNSPEC: u8 = 0;
+pub const CTA_TIMESTAMP_START: u8 = 1;
+pub const CTA_TIMESTAMP_STOP: u8 = 2;
+pub const CTA_TIMESTAMP_PAD: u8 = 3;
+
+pub const CTA_NAT_UNSPEC: u8 = 0;
+pub const CTA_NAT_V4_MINIP: u8 = 1;
+pub const CTA_NAT_MINIP: u8 = CTA_NAT_V4_MINIP;
+pub const CTA_NAT_V4_MAXIP: u8 = 2;
+pub const CTA_NAT_MAXIP: u8 = CTA_NAT_V4_MAXIP;
+pub const CTA_NAT_PROTO: u8 = 3;
+pub const CTA_NAT_V6_MINIP: u8 = 4;
+pub const CTA_NAT_V6_MAXIP: u8 = 5;
+
+pub const CTA_PROTONAT_UNSPEC: u8 = 0;
+pub const CTA_PROTONAT_PORT_MIN: u8 = 1;
+pub const CTA_PROTONAT_PORT_MAX: u8 = 2;
+
+pub const CTA_SEQADJ_UNSPEC: u8 = 0;
+pub const CTA_SEQADJ_CORRECTION_POS: u8 = 1;
+pub const CTA_SEQADJ_OFFSET_BEFORE: u8 = 2;
+pub const CTA_SEQADJ_OFFSET_AFTER: u8 = 3;
+
+pub const CTA_NAT_SEQ_UNSPEC: u8 = 0;
+pub const CTA_NAT_SEQ_CORRECTION_POS: u8 = 1;
+pub const CTA_NAT_SEQ_OFFSET_BEFORE: u8 = 2;
+pub const CTA_NAT_SEQ_OFFSET_AFTER: u8 = 3;
+
+pub const CTA_SYNPROXY_UNSPEC: u8 = 0;
+pub const CTA_SYNPROXY_ISN: u8 = 1;
+pub const CTA_SYNPROXY_ITS: u8 = 2;
+pub const CTA_SYNPROXY_TSOFF: u8 = 3;
+
+pub const CTA_EXPECT_UNSPEC: u8 = 0;
+pub const CTA_EXPECT_MASTER: u8 = 1;
+pub const CTA_EXPECT_TUPLE: u8 = 2;
+pub const CTA_EXPECT_MASK: u8 = 3;
+pub const CTA_EXPECT_TIMEOUT: u8 = 4;
+pub const CTA_EXPECT_ID: u8 = 5;
+pub const CTA_EXPECT_HELP_NAME: u8 = 6;
+pub const CTA_EXPECT_ZONE: u8 = 7;
+pub const CTA_EXPECT_FLAGS: u8 = 8;
+pub const CTA_EXPECT_CLASS: u8 = 9;
+pub const CTA_EXPECT_NAT: u8 = 10;
+pub const CTA_EXPECT_FN: u8 = 11;
+
+pub const CTA_EXPECT_NAT_UNSPEC: u8 = 0;
+pub const CTA_EXPECT_NAT_DIR: u8 = 1;
+pub const CTA_EXPECT_NAT_TUPLE: u8 = 2;
+
+pub const CTA_SECCTX_UNSPEC: u8 = 0;
+pub const CTA_SECCTX_NAME: u8 = 1;
+
+pub const CTA_STATS_UNSPEC: u8 = 0;
+pub const CTA_STATS_SEARCHED: u8 = 1; /* no longer used */
+pub const CTA_STATS_FOUND: u8 = 2;
+pub const CTA_STATS_NEW: u8 = 3; /* no longer used */
+pub const CTA_STATS_INVALID: u8 = 4;
+pub const CTA_STATS_IGNORE: u8 = 5; /* no longer used */
+pub const CTA_STATS_DELETE: u8 = 6; /* no longer used */
+pub const CTA_STATS_DELETE_LIST: u8 = 7; /* no longer used */
+pub const CTA_STATS_INSERT: u8 = 8;
+pub const CTA_STATS_INSERT_FAILED: u8 = 9;
+pub const CTA_STATS_DROP: u8 = 10;
+pub const CTA_STATS_EARLY_DROP: u8 = 10;
+pub const CTA_STATS_ERROR: u8 = 11;
+pub const CTA_STATS_SEARCH_RESTART: u8 = 12;
+pub const CTA_STATS_CLASH_RESOLVE: u8 = 13;
+pub const CTA_STATS_CHAIN_TOOLONG: u8 = 14;
+
+pub const CTA_STATS_GLOBAL_UNSPEC: u8 = 0;
+pub const CTA_STATS_GLOBAL_ENTRIES: u8 = 1;
+pub const CTA_STATS_GLOBAL_MAX_ENTRIES: u8 = 2;
+
+pub const CTA_STATS_EXP_UNSPEC: u8 = 0;
+pub const CTA_STATS_EXP_NEW: u8 = 1;
+pub const CTA_STATS_EXP_CREATE: u8 = 2;
+pub const CTA_STATS_EXP_DELETE: u8 = 3;
+
+pub const CTA_FILTER_UNSPEC: u8 = 0;
+pub const CTA_FILTER_ORIG_FLAGS: u8 = 1;
+pub const CTA_FILTER_REPLY_FLAGS: u8 = 2;
