@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+use std::num::NonZero;
+
 use netlink_packet_core::{
     NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_DUMP, NLM_F_REQUEST,
 };
@@ -75,7 +77,7 @@ fn main() {
 
     // Get a specific conntrack entry
     let orig = orig.unwrap();
-    let packet = get_request(AF_INET, 0, orig);
+    let packet = get_request(AF_INET, 0, orig.clone());
     let mut buf = vec![0; packet.header.length as usize];
     packet.serialize(&mut buf[..]);
     println!(">>> {:?}", packet);
@@ -86,6 +88,37 @@ fn main() {
     let rx_packet =
         <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
     println!("<<< packet_len={}\n{:?}", rx_packet.buffer_len(), rx_packet);
+
+    // Delete one entry
+    let packet = delete_request(AF_INET, 0, orig.clone());
+    let mut buf = vec![0; packet.header.length as usize];
+    packet.serialize(&mut buf[..]);
+    println!(">>> {:?}", packet);
+    socket.send(&buf[..], 0).unwrap();
+
+    // Confirm the etntry is deleted
+    let packet = get_request(AF_INET, 0, orig.clone());
+    let mut buf = vec![0; packet.header.length as usize];
+    packet.serialize(&mut buf[..]);
+    println!(">>> {:?}", packet);
+    socket.send(&buf[..], 0).unwrap();
+
+    let size = socket.recv(&mut &mut receive_buffer[..], 0).unwrap();
+    let bytes = &receive_buffer[..size];
+    let rx_packet =
+        <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
+    println!("<<< packet_len={}\n{:?}", rx_packet.buffer_len(), rx_packet);
+    if let NetlinkPayload::Error(e) = rx_packet.payload {
+        if let Some(code) = e.code {
+            if NonZero::new(-2).unwrap().ne(&code) {
+                panic!("found the other error");
+            }
+        }
+    } else {
+        panic!("NetlinkPayload::Error is expected");
+    }
+
+    println!(">>> An entry is deleted correctly")
 }
 
 fn list_request(family: u8, res_id: u16) -> NetlinkMessage<NetfilterMessage> {
@@ -114,6 +147,24 @@ fn get_request(
         NetlinkPayload::from(NetfilterMessage::new(
             NetfilterHeader::new(family, NFNETLINK_V0, res_id),
             CtNetlinkMessage::Get(Some(vec![FlowNla::Orig(tuple)])),
+        )),
+    );
+    message.finalize();
+    message
+}
+
+fn delete_request(
+    family: u8,
+    res_id: u16,
+    tuple: Vec<TupleNla>,
+) -> NetlinkMessage<NetfilterMessage> {
+    let mut hdr = NetlinkHeader::default();
+    hdr.flags = NLM_F_REQUEST;
+    let mut message = NetlinkMessage::new(
+        hdr,
+        NetlinkPayload::from(NetfilterMessage::new(
+            NetfilterHeader::new(family, NFNETLINK_V0, res_id),
+            CtNetlinkMessage::Delete(vec![FlowNla::Orig(tuple)]),
         )),
     );
     message.finalize();

@@ -6,7 +6,10 @@ use netlink_packet_utils::{
 
 use crate::{
     buffer::NetfilterBuffer,
-    constants::{IPCTNL_MSG_CT_GET, IPCTNL_MSG_CT_NEW, NFNL_SUBSYS_CTNETLINK},
+    constants::{
+        IPCTNL_MSG_CT_DELETE, IPCTNL_MSG_CT_GET, IPCTNL_MSG_CT_NEW,
+        NFNL_SUBSYS_CTNETLINK,
+    },
 };
 
 use super::nlas::flow::nla::FlowNla;
@@ -15,7 +18,7 @@ use super::nlas::flow::nla::FlowNla;
 pub enum CtNetlinkMessage {
     New(Vec<FlowNla>),
     Get(Option<Vec<FlowNla>>),
-    // Delete,
+    Delete(Vec<FlowNla>),
     // GetCrtZero,
     // GetStatsCPU,
     // GetStats,
@@ -34,6 +37,7 @@ impl CtNetlinkMessage {
         match self {
             CtNetlinkMessage::New(_) => IPCTNL_MSG_CT_NEW,
             CtNetlinkMessage::Get(_) => IPCTNL_MSG_CT_GET,
+            CtNetlinkMessage::Delete(_) => IPCTNL_MSG_CT_DELETE,
             CtNetlinkMessage::Other { message_type, .. } => *message_type,
         }
     }
@@ -47,6 +51,7 @@ impl Emitable for CtNetlinkMessage {
                 Some(nlas) => nlas.as_slice().buffer_len(),
                 None => 0,
             },
+            CtNetlinkMessage::Delete(nlas) => nlas.as_slice().buffer_len(),
             CtNetlinkMessage::Other { nlas, .. } => {
                 nlas.as_slice().buffer_len()
             }
@@ -61,6 +66,7 @@ impl Emitable for CtNetlinkMessage {
                     nlas.as_slice().emit(buffer);
                 }
             }
+            CtNetlinkMessage::Delete(nlas) => nlas.as_slice().emit(buffer),
             CtNetlinkMessage::Other { nlas, .. } => {
                 nlas.as_slice().emit(buffer)
             }
@@ -89,6 +95,11 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
                         buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
                     CtNetlinkMessage::Get(Some(nlas))
                 }
+            }
+            IPCTNL_MSG_CT_DELETE => {
+                let nlas =
+                    buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
+                CtNetlinkMessage::Delete(nlas)
             }
             _ => CtNetlinkMessage::Other {
                 message_type,
