@@ -88,7 +88,7 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
                 CtNetlinkMessage::New(nlas)
             }
             IPCTNL_MSG_CT_GET => {
-                if !buf.payload().is_empty() {
+                if buf.payload().is_empty() {
                     CtNetlinkMessage::Get(None)
                 } else {
                     let nlas =
