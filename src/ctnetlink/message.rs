@@ -7,8 +7,9 @@ use netlink_packet_utils::{
 use crate::{
     buffer::NetfilterBuffer,
     constants::{
-        IPCTNL_MSG_CT_DELETE, IPCTNL_MSG_CT_GET, IPCTNL_MSG_CT_GET_STATS,
-        IPCTNL_MSG_CT_GET_STATS_CPU, IPCTNL_MSG_CT_NEW, NFNL_SUBSYS_CTNETLINK,
+        IPCTNL_MSG_CT_DELETE, IPCTNL_MSG_CT_GET, IPCTNL_MSG_CT_GET_CTRZERO,
+        IPCTNL_MSG_CT_GET_STATS, IPCTNL_MSG_CT_GET_STATS_CPU,
+        IPCTNL_MSG_CT_NEW, NFNL_SUBSYS_CTNETLINK,
     },
 };
 
@@ -19,7 +20,7 @@ pub enum CtNetlinkMessage {
     New(Vec<FlowNla>),
     Get(Option<Vec<FlowNla>>),
     Delete(Vec<FlowNla>),
-    // GetCrtZero,
+    GetCrtZero(Option<Vec<FlowNla>>),
     GetStatsCPU(Option<Vec<StatNla>>),
     GetStats(Option<Vec<StatNla>>),
     // GetDying,
@@ -38,6 +39,7 @@ impl CtNetlinkMessage {
             CtNetlinkMessage::New(_) => IPCTNL_MSG_CT_NEW,
             CtNetlinkMessage::Get(_) => IPCTNL_MSG_CT_GET,
             CtNetlinkMessage::Delete(_) => IPCTNL_MSG_CT_DELETE,
+            CtNetlinkMessage::GetCrtZero(_) => IPCTNL_MSG_CT_GET_CTRZERO,
             CtNetlinkMessage::GetStatsCPU(_) => IPCTNL_MSG_CT_GET_STATS_CPU,
             CtNetlinkMessage::GetStats(_) => IPCTNL_MSG_CT_GET_STATS,
             CtNetlinkMessage::Other { message_type, .. } => *message_type,
@@ -54,6 +56,10 @@ impl Emitable for CtNetlinkMessage {
                 None => 0,
             },
             CtNetlinkMessage::Delete(nlas) => nlas.as_slice().buffer_len(),
+            CtNetlinkMessage::GetCrtZero(nlas) => match nlas {
+                Some(nlas) => nlas.as_slice().buffer_len(),
+                None => 0,
+            },
             CtNetlinkMessage::GetStatsCPU(nlas) => match nlas {
                 Some(nlas) => nlas.as_slice().buffer_len(),
                 None => 0,
@@ -72,6 +78,11 @@ impl Emitable for CtNetlinkMessage {
         match self {
             CtNetlinkMessage::New(nlas) => nlas.as_slice().emit(buffer),
             CtNetlinkMessage::Get(nlas) => {
+                if let Some(nlas) = nlas {
+                    nlas.as_slice().emit(buffer);
+                }
+            }
+            CtNetlinkMessage::GetCrtZero(nlas) => {
                 if let Some(nlas) = nlas {
                     nlas.as_slice().emit(buffer);
                 }
@@ -120,6 +131,15 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
                 let nlas =
                     buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
                 CtNetlinkMessage::Delete(nlas)
+            }
+            IPCTNL_MSG_CT_GET_CTRZERO => {
+                if buf.payload().is_empty() {
+                    CtNetlinkMessage::GetCrtZero(None)
+                } else {
+                    let nlas =
+                        buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
+                    CtNetlinkMessage::GetCrtZero(Some(nlas))
+                }
             }
             IPCTNL_MSG_CT_GET_STATS_CPU => {
                 if buf.payload().is_empty() {

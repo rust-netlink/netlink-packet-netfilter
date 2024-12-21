@@ -23,7 +23,7 @@ fn main() {
     socket.bind_auto().unwrap();
 
     // List all conntrack entries
-    let packet = list_request(AF_INET, 0);
+    let packet = list_request(AF_INET, 0, false);
     let mut buf = vec![0; packet.header.length as usize];
     packet.serialize(&mut buf[..]);
     println!(">>> {:?}", packet);
@@ -172,18 +172,71 @@ fn main() {
             break;
         }
     }
+
+    // List all conntrack entries
+    let packet = list_request(AF_INET, 0, true);
+    let mut buf = vec![0; packet.header.length as usize];
+    packet.serialize(&mut buf[..]);
+    println!(">>> {:?}", packet);
+    socket.send(&buf[..], 0).unwrap();
+    let mut done = false;
+    loop {
+        let size = socket.recv(&mut &mut receive_buffer[..], 0).unwrap();
+        let bytes = &receive_buffer[..size];
+        let mut read = 0;
+        let mut msg_count = 0;
+        while bytes.len() > read {
+            let rx_packet =
+                <NetlinkMessage<NetfilterMessage>>::deserialize(&bytes[read..])
+                    .unwrap();
+            if let NetlinkPayload::Done(_) = rx_packet.payload {
+                done = true;
+                break;
+            }
+            read += rx_packet.buffer_len();
+            msg_count += 1;
+            println!(
+                "<<< counter={} packet_len={}\n{:?}",
+                msg_count,
+                rx_packet.buffer_len(),
+                rx_packet
+            );
+
+            if let NetlinkPayload::Error(e) = rx_packet.payload {
+                println!("{}", e);
+                assert_eq!(e.code, None);
+            }
+        }
+        if done {
+            break;
+        }
+    }
 }
 
-fn list_request(family: u8, res_id: u16) -> NetlinkMessage<NetfilterMessage> {
+fn list_request(
+    family: u8,
+    res_id: u16,
+    zero: bool,
+) -> NetlinkMessage<NetfilterMessage> {
     let mut hdr = NetlinkHeader::default();
     hdr.flags = NLM_F_REQUEST | NLM_F_DUMP;
-    let mut message = NetlinkMessage::new(
-        hdr,
-        NetlinkPayload::from(NetfilterMessage::new(
-            NetfilterHeader::new(family, NFNETLINK_V0, res_id),
-            CtNetlinkMessage::Get(None),
-        )),
-    );
+    let mut message = if zero {
+        NetlinkMessage::new(
+            hdr,
+            NetlinkPayload::from(NetfilterMessage::new(
+                NetfilterHeader::new(family, NFNETLINK_V0, res_id),
+                CtNetlinkMessage::GetCrtZero(None),
+            )),
+        )
+    } else {
+        NetlinkMessage::new(
+            hdr,
+            NetlinkPayload::from(NetfilterMessage::new(
+                NetfilterHeader::new(family, NFNETLINK_V0, res_id),
+                CtNetlinkMessage::Get(None),
+            )),
+        )
+    };
     message.finalize();
     message
 }
