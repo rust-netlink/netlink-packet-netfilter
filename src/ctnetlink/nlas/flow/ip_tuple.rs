@@ -9,13 +9,14 @@ use netlink_packet_utils::{
     DecodeError, Parseable,
 };
 
-use crate::constants::{
-    CTA_IP_V4_DST, CTA_IP_V4_SRC, CTA_IP_V6_DST, CTA_IP_V6_SRC,
-    CTA_PROTO_DST_PORT, CTA_PROTO_NUM, CTA_PROTO_SRC_PORT, CTA_TUPLE_IP,
-    CTA_TUPLE_PROTO,
+use crate::{
+    constants::{
+        CTA_IP_V4_DST, CTA_IP_V4_SRC, CTA_IP_V6_DST, CTA_IP_V6_SRC,
+        CTA_PROTO_DST_PORT, CTA_PROTO_NUM, CTA_PROTO_SRC_PORT, CTA_TUPLE_IP,
+        CTA_TUPLE_PROTO,
+    },
+    ctnetlink::nlas::ct_attr::{CtAttr, CtAttrBuilder},
 };
-
-use super::{CtAttr, CtAttrBuilder};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TupleNla {

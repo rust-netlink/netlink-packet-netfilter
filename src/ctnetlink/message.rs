@@ -7,12 +7,12 @@ use netlink_packet_utils::{
 use crate::{
     buffer::NetfilterBuffer,
     constants::{
-        IPCTNL_MSG_CT_DELETE, IPCTNL_MSG_CT_GET, IPCTNL_MSG_CT_NEW,
-        NFNL_SUBSYS_CTNETLINK,
+        IPCTNL_MSG_CT_DELETE, IPCTNL_MSG_CT_GET, IPCTNL_MSG_CT_GET_STATS,
+        IPCTNL_MSG_CT_NEW, NFNL_SUBSYS_CTNETLINK,
     },
 };
 
-use super::nlas::flow::nla::FlowNla;
+use super::nlas::{flow::nla::FlowNla, stat::nla::StatNla};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CtNetlinkMessage {
@@ -21,7 +21,7 @@ pub enum CtNetlinkMessage {
     Delete(Vec<FlowNla>),
     // GetCrtZero,
     // GetStatsCPU,
-    // GetStats,
+    GetStats(Option<Vec<StatNla>>),
     // GetDying,
     // GetUnconfirmed,
     Other {
@@ -38,6 +38,7 @@ impl CtNetlinkMessage {
             CtNetlinkMessage::New(_) => IPCTNL_MSG_CT_NEW,
             CtNetlinkMessage::Get(_) => IPCTNL_MSG_CT_GET,
             CtNetlinkMessage::Delete(_) => IPCTNL_MSG_CT_DELETE,
+            CtNetlinkMessage::GetStats(_) => IPCTNL_MSG_CT_GET_STATS,
             CtNetlinkMessage::Other { message_type, .. } => *message_type,
         }
     }
@@ -52,6 +53,10 @@ impl Emitable for CtNetlinkMessage {
                 None => 0,
             },
             CtNetlinkMessage::Delete(nlas) => nlas.as_slice().buffer_len(),
+            CtNetlinkMessage::GetStats(nlas) => match nlas {
+                Some(nlas) => nlas.as_slice().buffer_len(),
+                None => 0,
+            },
             CtNetlinkMessage::Other { nlas, .. } => {
                 nlas.as_slice().buffer_len()
             }
@@ -67,6 +72,11 @@ impl Emitable for CtNetlinkMessage {
                 }
             }
             CtNetlinkMessage::Delete(nlas) => nlas.as_slice().emit(buffer),
+            CtNetlinkMessage::GetStats(nlas) => {
+                if let Some(nlas) = nlas {
+                    nlas.as_slice().emit(buffer)
+                }
+            }
             CtNetlinkMessage::Other { nlas, .. } => {
                 nlas.as_slice().emit(buffer)
             }
@@ -100,6 +110,15 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
                 let nlas =
                     buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
                 CtNetlinkMessage::Delete(nlas)
+            }
+            IPCTNL_MSG_CT_GET_STATS => {
+                if buf.payload().is_empty() {
+                    CtNetlinkMessage::GetStats(None)
+                } else {
+                    let nlas =
+                        buf.parse_all_nlas(|nla_buf| StatNla::parse(&nla_buf))?;
+                    CtNetlinkMessage::GetStats(Some(nlas))
+                }
             }
             _ => CtNetlinkMessage::Other {
                 message_type,

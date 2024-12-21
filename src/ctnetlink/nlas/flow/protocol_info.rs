@@ -15,10 +15,8 @@ use crate::{
         CTA_PROTOINFO_TCP_STATE, CTA_PROTOINFO_TCP_WSCALE_ORIGINAL,
         CTA_PROTOINFO_TCP_WSCALE_REPLY, CTA_PROTOINFO_UNSPEC,
     },
-    ctnetlink::nlas::flow::CtAttrBuilder,
+    ctnetlink::nlas::ct_attr::{CtAttr, CtAttrBuilder},
 };
-
-use super::CtAttr;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ProtocolInfo {

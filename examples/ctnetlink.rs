@@ -118,7 +118,19 @@ fn main() {
         panic!("NetlinkPayload::Error is expected");
     }
 
-    println!(">>> An entry is deleted correctly")
+    println!(">>> An entry is deleted correctly");
+
+    // stat
+    let packet = stat_request(AF_INET, 0);
+    let mut buf = vec![0; packet.header.length as usize];
+    packet.serialize(&mut buf);
+    println!(">>> {:?}", packet);
+    socket.send(&buf[..], 0).unwrap();
+    let size = socket.recv(&mut &mut receive_buffer[..], 0).unwrap();
+    let bytes = &receive_buffer[..size];
+    let rx_packet =
+        <NetlinkMessage<NetfilterMessage>>::deserialize(bytes).unwrap();
+    println!("<<< packet_len={}\n{:?}", rx_packet.buffer_len(), rx_packet);
 }
 
 fn list_request(family: u8, res_id: u16) -> NetlinkMessage<NetfilterMessage> {
@@ -165,6 +177,20 @@ fn delete_request(
         NetlinkPayload::from(NetfilterMessage::new(
             NetfilterHeader::new(family, NFNETLINK_V0, res_id),
             CtNetlinkMessage::Delete(vec![FlowNla::Orig(tuple)]),
+        )),
+    );
+    message.finalize();
+    message
+}
+
+fn stat_request(family: u8, res_id: u16) -> NetlinkMessage<NetfilterMessage> {
+    let mut hdr = NetlinkHeader::default();
+    hdr.flags = NLM_F_REQUEST;
+    let mut message = NetlinkMessage::new(
+        hdr,
+        NetlinkPayload::from(NetfilterMessage::new(
+            NetfilterHeader::new(family, NFNETLINK_V0, res_id),
+            CtNetlinkMessage::GetStats(None),
         )),
     );
     message.finalize();
