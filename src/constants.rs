@@ -97,7 +97,7 @@ pub const IPCTNL_MSG_CT_DELETE: u8 = 2;
 pub const IPCTNL_MSG_CT_GET_CTRZERO: u8 = 3;
 pub const IPCTNL_MSG_CT_GET_STATS_CPU: u8 = 4;
 pub const IPCTNL_MSG_CT_GET_STATS: u8 = 5;
-pub const IPCTNL_MSG_CT_DYING: u8 = 6;
+pub const IPCTNL_MSG_CT_GET_DYING: u8 = 6;
 pub const IPCTNL_MSG_CT_GET_UNCONFIRMED: u8 = 7;
 
 pub const CTA_UNSPEC: u16 = 0;

@@ -8,7 +8,8 @@ use crate::{
     buffer::NetfilterBuffer,
     constants::{
         IPCTNL_MSG_CT_DELETE, IPCTNL_MSG_CT_GET, IPCTNL_MSG_CT_GET_CTRZERO,
-        IPCTNL_MSG_CT_GET_STATS, IPCTNL_MSG_CT_GET_STATS_CPU,
+        IPCTNL_MSG_CT_GET_DYING, IPCTNL_MSG_CT_GET_STATS,
+        IPCTNL_MSG_CT_GET_STATS_CPU, IPCTNL_MSG_CT_GET_UNCONFIRMED,
         IPCTNL_MSG_CT_NEW, NFNL_SUBSYS_CTNETLINK,
     },
 };
@@ -23,8 +24,8 @@ pub enum CtNetlinkMessage {
     GetCrtZero(Option<Vec<FlowNla>>),
     GetStatsCPU(Option<Vec<StatNla>>),
     GetStats(Option<Vec<StatNla>>),
-    // GetDying,
-    // GetUnconfirmed,
+    GetDying(Option<Vec<FlowNla>>),
+    GetUnconfirmed(Option<Vec<FlowNla>>),
     Other {
         message_type: u8,
         nlas: Vec<DefaultNla>,
@@ -42,6 +43,10 @@ impl CtNetlinkMessage {
             CtNetlinkMessage::GetCrtZero(_) => IPCTNL_MSG_CT_GET_CTRZERO,
             CtNetlinkMessage::GetStatsCPU(_) => IPCTNL_MSG_CT_GET_STATS_CPU,
             CtNetlinkMessage::GetStats(_) => IPCTNL_MSG_CT_GET_STATS,
+            CtNetlinkMessage::GetDying(_) => IPCTNL_MSG_CT_GET_DYING,
+            CtNetlinkMessage::GetUnconfirmed(_) => {
+                IPCTNL_MSG_CT_GET_UNCONFIRMED
+            }
             CtNetlinkMessage::Other { message_type, .. } => *message_type,
         }
     }
@@ -65,6 +70,14 @@ impl Emitable for CtNetlinkMessage {
                 None => 0,
             },
             CtNetlinkMessage::GetStats(nlas) => match nlas {
+                Some(nlas) => nlas.as_slice().buffer_len(),
+                None => 0,
+            },
+            CtNetlinkMessage::GetDying(nlas) => match nlas {
+                Some(nlas) => nlas.as_slice().buffer_len(),
+                None => 0,
+            },
+            CtNetlinkMessage::GetUnconfirmed(nlas) => match nlas {
                 Some(nlas) => nlas.as_slice().buffer_len(),
                 None => 0,
             },
@@ -96,6 +109,16 @@ impl Emitable for CtNetlinkMessage {
             CtNetlinkMessage::GetStats(nlas) => {
                 if let Some(nlas) = nlas {
                     nlas.as_slice().emit(buffer)
+                }
+            }
+            CtNetlinkMessage::GetDying(nlas) => {
+                if let Some(nlas) = nlas {
+                    nlas.as_slice().emit(buffer);
+                }
+            }
+            CtNetlinkMessage::GetUnconfirmed(nlas) => {
+                if let Some(nlas) = nlas {
+                    nlas.as_slice().emit(buffer);
                 }
             }
             CtNetlinkMessage::Other { nlas, .. } => {
@@ -157,6 +180,24 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
                     let nlas =
                         buf.parse_all_nlas(|nla_buf| StatNla::parse(&nla_buf))?;
                     CtNetlinkMessage::GetStats(Some(nlas))
+                }
+            }
+            IPCTNL_MSG_CT_GET_DYING => {
+                if buf.payload().is_empty() {
+                    CtNetlinkMessage::GetDying(None)
+                } else {
+                    let nlas =
+                        buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
+                    CtNetlinkMessage::GetDying(Some(nlas))
+                }
+            }
+            IPCTNL_MSG_CT_GET_UNCONFIRMED => {
+                if buf.payload().is_empty() {
+                    CtNetlinkMessage::GetUnconfirmed(None)
+                } else {
+                    let nlas =
+                        buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
+                    CtNetlinkMessage::GetUnconfirmed(Some(nlas))
                 }
             }
             _ => CtNetlinkMessage::Other {
