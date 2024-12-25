@@ -83,11 +83,11 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct ProtocolInfoTcp {
-    state: u8,
-    wscale_original: u8,
-    wscale_reply: u8,
-    flgas_original: u16,
-    flags_reply: u16,
+    pub state: u8,
+    pub wscale_original: u8,
+    pub wscale_reply: u8,
+    pub flgas_original: u16,
+    pub flags_reply: u16,
 }
 
 impl Nla for ProtocolInfoTcp {
