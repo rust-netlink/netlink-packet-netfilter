@@ -5,7 +5,7 @@ use netlink_packet_utils::nla::Nla;
 
 use crate::constants::CTA_STATUS;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ConnectionStatusFlag {
     Offload = 1 << 15,
     Helper = 1 << 14,
