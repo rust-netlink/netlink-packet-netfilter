@@ -5,6 +5,7 @@ use crate::{
         NetfilterHeader, NetfilterMessage, NetfilterMessageInner,
         NETFILTER_HEADER_LEN,
     },
+    nfconntrack::NfConntrackMessage,
     nflog::NfLogMessage,
 };
 use anyhow::Context;
@@ -56,6 +57,10 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
         let subsys = (message_type >> 8) as u8;
         let message_type = message_type as u8;
         let inner = match subsys {
+            NfConntrackMessage::SUBSYS => NetfilterMessageInner::NfConntrack(
+                NfConntrackMessage::parse_with_param(buf, message_type)
+                    .context("failed to parse nfconntrack payload")?,
+            ),
             NfLogMessage::SUBSYS => NetfilterMessageInner::NfLog(
                 NfLogMessage::parse_with_param(buf, message_type)
                     .context("failed to parse nflog payload")?,

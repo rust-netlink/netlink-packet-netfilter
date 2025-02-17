@@ -88,3 +88,32 @@ pub const NFULA_CT_INFO: u16 = libc::NFULA_CT_INFO as u16;
 
 pub const NFULNL_MSG_CONFIG: u8 = libc::NFULNL_MSG_CONFIG as u8;
 pub const NFULNL_MSG_PACKET: u8 = libc::NFULNL_MSG_PACKET as u8;
+
+pub const NFNLGRP_CONNTRACK_NEW: u32 = 1;
+pub const NFNLGRP_CONNTRACK_UPDATE: u32 = 2;
+pub const NFNLGRP_CONNTRACK_DESTROY: u32 = 3;
+
+pub const IPCTNL_MSG_CT_NEW: u8 = 0;
+pub const IPCTNL_MSG_CT_GET: u8 = 1;
+pub const IPCTNL_MSG_CT_DELETE: u8 = 2;
+pub const IPCTNL_MSG_CT_GET_CTRZERO: u8 = 3;
+pub const IPCTNL_MSG_CT_GET_STATS_CPU: u8 = 4;
+pub const IPCTNL_MSG_CT_GET_STATS: u8 = 5;
+pub const IPCTNL_MSG_CT_GET_DYING: u8 = 6;
+pub const IPCTNL_MSG_CT_GET_UNCONFIRMED: u8 = 7;
+
+pub const CTA_TUPLE_ORIG: u16 = 1;
+pub const CTA_TUPLE_REPLY: u16 = 2;
+
+pub const CTA_TUPLE_IP: u16 = 1;
+pub const CTA_TUPLE_PROTO: u16 = 2;
+pub const CTA_TUPLE_ZONE: u16 = 3;
+
+pub const CTA_IP_V4_SRC: u16 = 1;
+pub const CTA_IP_V4_DST: u16 = 2;
+pub const CTA_IP_V6_SRC: u16 = 3;
+pub const CTA_IP_V6_DST: u16 = 4;
+
+pub const CTA_PROTO_NUM: u16 = 1;
+pub const CTA_PROTO_SRC_PORT: u16 = 2;
+pub const CTA_PROTO_DST_PORT: u16 = 3;
