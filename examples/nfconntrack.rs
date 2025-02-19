@@ -6,7 +6,7 @@
 //   3) Perform network activity from your host, which would result in conntrack updates:
 //      curl http://example.com
 
-use netlink_packet_netfilter::{
+use reyzell_netlink_packet_netfilter::{
     constants::{NFNLGRP_CONNTRACK_NEW, NFNLGRP_CONNTRACK_DESTROY},
     nfconntrack::{
         nlas::{ConnectionProperties, ConnectionTuple},

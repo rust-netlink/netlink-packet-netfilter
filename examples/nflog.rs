@@ -10,7 +10,7 @@ use std::{net::Ipv4Addr, time::Duration};
 
 use byteorder::{ByteOrder, NetworkEndian};
 use netlink_packet_core::{NetlinkMessage, NetlinkPayload};
-use netlink_packet_netfilter::{
+use reyzell_netlink_packet_netfilter::{
     constants::*,
     nflog::{
         config_request,
