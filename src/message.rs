@@ -9,8 +9,7 @@ use netlink_packet_utils::{
 };
 
 use crate::{
-    buffer::NetfilterBuffer, ctnetlink::message::CtNetlinkMessage,
-    nflog::NfLogMessage,
+    buffer::NetfilterBuffer, ctnetlink::CtNetlinkMessage, nflog::NfLogMessage,
 };
 
 pub const NETFILTER_HEADER_LEN: usize = 4;

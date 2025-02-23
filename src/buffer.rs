@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    ctnetlink::message::CtNetlinkMessage,
+    ctnetlink::CtNetlinkMessage,
     message::{
         NetfilterHeader, NetfilterMessage, NetfilterMessageInner,
         NETFILTER_HEADER_LEN,

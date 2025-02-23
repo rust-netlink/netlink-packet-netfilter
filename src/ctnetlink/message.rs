@@ -4,28 +4,34 @@ use netlink_packet_utils::{
     nla::DefaultNla, DecodeError, Emitable, Parseable, ParseableParametrized,
 };
 
-use crate::{
-    buffer::NetfilterBuffer,
-    constants::{
-        IPCTNL_MSG_CT_DELETE, IPCTNL_MSG_CT_GET, IPCTNL_MSG_CT_GET_CTRZERO,
-        IPCTNL_MSG_CT_GET_DYING, IPCTNL_MSG_CT_GET_STATS,
-        IPCTNL_MSG_CT_GET_STATS_CPU, IPCTNL_MSG_CT_GET_UNCONFIRMED,
-        IPCTNL_MSG_CT_NEW, NFNL_SUBSYS_CTNETLINK,
-    },
+use crate::{buffer::NetfilterBuffer, constants::NFNL_SUBSYS_CTNETLINK};
+
+use super::nlas::{
+    flow::nla::FlowAttribute,
+    stat::nla::{StatCpuAttribute, StatGlobalAttribute},
 };
 
-use super::nlas::{flow::nla::FlowNla, stat::nla::StatNla};
+// netflter/nfnetlink_conntrack.h
+// There is no definitions in rust-lang/libc
+const IPCTNL_MSG_CT_NEW: u8 = 0;
+const IPCTNL_MSG_CT_GET: u8 = 1;
+const IPCTNL_MSG_CT_DELETE: u8 = 2;
+const IPCTNL_MSG_CT_GET_CTRZERO: u8 = 3;
+const IPCTNL_MSG_CT_GET_STATS_CPU: u8 = 4;
+const IPCTNL_MSG_CT_GET_STATS: u8 = 5;
+const IPCTNL_MSG_CT_GET_DYING: u8 = 6;
+const IPCTNL_MSG_CT_GET_UNCONFIRMED: u8 = 7;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CtNetlinkMessage {
-    New(Vec<FlowNla>),
-    Get(Option<Vec<FlowNla>>),
-    Delete(Vec<FlowNla>),
-    GetCrtZero(Option<Vec<FlowNla>>),
-    GetStatsCPU(Option<Vec<StatNla>>),
-    GetStats(Option<Vec<StatNla>>),
-    GetDying(Option<Vec<FlowNla>>),
-    GetUnconfirmed(Option<Vec<FlowNla>>),
+    New(Vec<FlowAttribute>),
+    Get(Option<Vec<FlowAttribute>>),
+    Delete(Vec<FlowAttribute>),
+    GetCrtZero(Option<Vec<FlowAttribute>>),
+    GetStatsCPU(Option<Vec<StatCpuAttribute>>),
+    GetStats(Option<Vec<StatGlobalAttribute>>),
+    GetDying(Option<Vec<FlowAttribute>>),
+    GetUnconfirmed(Option<Vec<FlowAttribute>>),
     Other {
         message_type: u8,
         nlas: Vec<DefaultNla>,
@@ -137,30 +143,32 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
     ) -> Result<Self, DecodeError> {
         Ok(match message_type {
             IPCTNL_MSG_CT_NEW => {
-                let nlas =
-                    buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
+                let nlas = buf
+                    .parse_all_nlas(|nla_buf| FlowAttribute::parse(&nla_buf))?;
                 CtNetlinkMessage::New(nlas)
             }
             IPCTNL_MSG_CT_GET => {
                 if buf.payload().is_empty() {
                     CtNetlinkMessage::Get(None)
                 } else {
-                    let nlas =
-                        buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
+                    let nlas = buf.parse_all_nlas(|nla_buf| {
+                        FlowAttribute::parse(&nla_buf)
+                    })?;
                     CtNetlinkMessage::Get(Some(nlas))
                 }
             }
             IPCTNL_MSG_CT_DELETE => {
-                let nlas =
-                    buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
+                let nlas = buf
+                    .parse_all_nlas(|nla_buf| FlowAttribute::parse(&nla_buf))?;
                 CtNetlinkMessage::Delete(nlas)
             }
             IPCTNL_MSG_CT_GET_CTRZERO => {
                 if buf.payload().is_empty() {
                     CtNetlinkMessage::GetCrtZero(None)
                 } else {
-                    let nlas =
-                        buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
+                    let nlas = buf.parse_all_nlas(|nla_buf| {
+                        FlowAttribute::parse(&nla_buf)
+                    })?;
                     CtNetlinkMessage::GetCrtZero(Some(nlas))
                 }
             }
@@ -168,8 +176,9 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
                 if buf.payload().is_empty() {
                     CtNetlinkMessage::GetStatsCPU(None)
                 } else {
-                    let nlas =
-                        buf.parse_all_nlas(|nla_buf| StatNla::parse(&nla_buf))?;
+                    let nlas = buf.parse_all_nlas(|nla_buf| {
+                        StatCpuAttribute::parse(&nla_buf)
+                    })?;
                     CtNetlinkMessage::GetStatsCPU(Some(nlas))
                 }
             }
@@ -177,8 +186,9 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
                 if buf.payload().is_empty() {
                     CtNetlinkMessage::GetStats(None)
                 } else {
-                    let nlas =
-                        buf.parse_all_nlas(|nla_buf| StatNla::parse(&nla_buf))?;
+                    let nlas = buf.parse_all_nlas(|nla_buf| {
+                        StatGlobalAttribute::parse(&nla_buf)
+                    })?;
                     CtNetlinkMessage::GetStats(Some(nlas))
                 }
             }
@@ -186,8 +196,9 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
                 if buf.payload().is_empty() {
                     CtNetlinkMessage::GetDying(None)
                 } else {
-                    let nlas =
-                        buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
+                    let nlas = buf.parse_all_nlas(|nla_buf| {
+                        FlowAttribute::parse(&nla_buf)
+                    })?;
                     CtNetlinkMessage::GetDying(Some(nlas))
                 }
             }
@@ -195,8 +206,9 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
                 if buf.payload().is_empty() {
                     CtNetlinkMessage::GetUnconfirmed(None)
                 } else {
-                    let nlas =
-                        buf.parse_all_nlas(|nla_buf| FlowNla::parse(&nla_buf))?;
+                    let nlas = buf.parse_all_nlas(|nla_buf| {
+                        FlowAttribute::parse(&nla_buf)
+                    })?;
                     CtNetlinkMessage::GetUnconfirmed(Some(nlas))
                 }
             }

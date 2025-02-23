@@ -9,14 +9,19 @@ use netlink_packet_utils::{
     DecodeError, Parseable,
 };
 
-use crate::{
-    constants::{
-        CTA_IP_V4_DST, CTA_IP_V4_SRC, CTA_IP_V6_DST, CTA_IP_V6_SRC,
-        CTA_PROTO_DST_PORT, CTA_PROTO_NUM, CTA_PROTO_SRC_PORT, CTA_TUPLE_IP,
-        CTA_TUPLE_PROTO,
-    },
-    ctnetlink::nlas::ct_attr::{CtAttr, CtAttrBuilder},
-};
+use crate::ctnetlink::nlas::ct_attr::{ConntrackAttribute, CtAttrBuilder};
+
+const CTA_IP_V4_SRC: u16 = 1;
+const CTA_IP_V4_DST: u16 = 2;
+const CTA_IP_V6_SRC: u16 = 3;
+const CTA_IP_V6_DST: u16 = 4;
+
+const CTA_TUPLE_IP: u16 = 1;
+const CTA_TUPLE_PROTO: u16 = 2;
+
+const CTA_PROTO_NUM: u16 = 1;
+const CTA_PROTO_SRC_PORT: u16 = 2;
+const CTA_PROTO_DST_PORT: u16 = 3;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TupleNla {
@@ -51,7 +56,7 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
     for TupleNla
 {
     fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
-        let attr = CtAttr::parse(buf)?;
+        let attr = ConntrackAttribute::parse(buf)?;
         match attr.attr_type {
             CTA_TUPLE_IP => Ok(TupleNla::Ip(IpTuple::try_from(attr)?)),
             CTA_TUPLE_PROTO => {
@@ -125,7 +130,7 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
     for IpTuple
 {
     fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
-        let ip_tuple = CtAttr::parse(buf)?;
+        let ip_tuple = ConntrackAttribute::parse(buf)?;
         let mut builder = IpTupleBuilder::default();
 
         if let Some(attrs) = ip_tuple.nested {
@@ -153,10 +158,10 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
     }
 }
 
-impl TryFrom<CtAttr> for IpTuple {
+impl TryFrom<ConntrackAttribute> for IpTuple {
     type Error = DecodeError;
 
-    fn try_from(attr: CtAttr) -> Result<Self, Self::Error> {
+    fn try_from(attr: ConntrackAttribute) -> Result<Self, Self::Error> {
         if attr.attr_type != CTA_TUPLE_IP {
             return Err(DecodeError::from("CTA_TUPLE_IP is expected"));
         }
@@ -223,10 +228,10 @@ pub struct ProtocolTuple {
     pub protocol: u8,
 }
 
-impl TryFrom<CtAttr> for ProtocolTuple {
+impl TryFrom<ConntrackAttribute> for ProtocolTuple {
     type Error = DecodeError;
 
-    fn try_from(attr: CtAttr) -> Result<Self, Self::Error> {
+    fn try_from(attr: ConntrackAttribute) -> Result<Self, Self::Error> {
         if attr.attr_type != CTA_TUPLE_PROTO {
             return Err(DecodeError::from("CTA_TUPLE_PROTO is expected"));
         }
@@ -301,7 +306,7 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
     for ProtocolTuple
 {
     fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
-        let proto_tuple = CtAttr::parse(buf)?;
+        let proto_tuple = ConntrackAttribute::parse(buf)?;
         let mut builder = ProtocolTupleBuilder::default();
 
         if let Some(attrs) = proto_tuple.nested {

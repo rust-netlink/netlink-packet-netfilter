@@ -4,26 +4,30 @@ use std::convert::TryFrom;
 
 use byteorder::{ByteOrder, NativeEndian};
 use netlink_packet_utils::{
+    buffer,
     nla::{Nla, NlaBuffer, NLA_F_NESTED},
     DecodeError, Emitable, Parseable,
 };
 
-use crate::{
-    constants::{
-        CTA_PROTOINFO_DCCP, CTA_PROTOINFO_SCTP, CTA_PROTOINFO_TCP,
-        CTA_PROTOINFO_TCP_FLAGS_ORIGINAL, CTA_PROTOINFO_TCP_FLAGS_REPLY,
-        CTA_PROTOINFO_TCP_STATE, CTA_PROTOINFO_TCP_WSCALE_ORIGINAL,
-        CTA_PROTOINFO_TCP_WSCALE_REPLY, CTA_PROTOINFO_UNSPEC,
-    },
-    ctnetlink::nlas::ct_attr::{CtAttr, CtAttrBuilder},
-};
+use crate::ctnetlink::nlas::ct_attr::{ConntrackAttribute, CtAttrBuilder};
+
+const CTA_PROTOINFO_UNSPEC: u16 = 0;
+const CTA_PROTOINFO_TCP: u16 = 1;
+const CTA_PROTOINFO_DCCP: u16 = 2;
+const CTA_PROTOINFO_SCTP: u16 = 3;
+
+const CTA_PROTOINFO_TCP_STATE: u16 = 1;
+const CTA_PROTOINFO_TCP_WSCALE_ORIGINAL: u16 = 2;
+const CTA_PROTOINFO_TCP_WSCALE_REPLY: u16 = 3;
+const CTA_PROTOINFO_TCP_FLAGS_ORIGINAL: u16 = 4;
+const CTA_PROTOINFO_TCP_FLAGS_REPLY: u16 = 5;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ProtocolInfo {
     Tcp(ProtocolInfoTcp),
-    Dccp(CtAttr),
-    Sctp(CtAttr),
-    Other(CtAttr),
+    Dccp(ConntrackAttribute),
+    Sctp(ConntrackAttribute),
+    Other(ConntrackAttribute),
 }
 
 impl ProtocolInfo {
@@ -68,7 +72,7 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
     for ProtocolInfo
 {
     fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
-        let attr = CtAttr::parse(buf)?;
+        let attr = ConntrackAttribute::parse(buf)?;
 
         match attr.attr_type {
             CTA_PROTOINFO_TCP => {
@@ -81,12 +85,34 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
     }
 }
 
+buffer!(ProtocolInfoTcpBuffer {
+    state: (u8, 0),
+    wscale_original: (u8, 1),
+    wscale_reply: (u8, 2),
+    flags_original: (u16, 3..5),
+    flags_reply: (u16, 5..7),
+});
+
+impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<ProtocolInfoTcpBuffer<&'a T>>
+    for ProtocolInfoTcp
+{
+    fn parse(buf: &ProtocolInfoTcpBuffer<&'a T>) -> Result<Self, DecodeError> {
+        Ok(ProtocolInfoTcp {
+            state: buf.state(),
+            wscale_original: buf.wscale_original(),
+            wscale_reply: buf.wscale_reply(),
+            flags_original: buf.flags_original(),
+            flags_reply: buf.flags_reply(),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct ProtocolInfoTcp {
     pub state: u8,
     pub wscale_original: u8,
     pub wscale_reply: u8,
-    pub flgas_original: u16,
+    pub flags_original: u16,
     pub flags_reply: u16,
 }
 
@@ -102,7 +128,7 @@ impl Nla for ProtocolInfoTcp {
     fn emit_value(&self, buffer: &mut [u8]) {
         let mut flag_orig = [0u8; 2];
         let mut flag_reply = [0u8; 2];
-        NativeEndian::write_u16(&mut flag_orig, self.flgas_original);
+        NativeEndian::write_u16(&mut flag_orig, self.flags_original);
         NativeEndian::write_u16(&mut flag_reply, self.flags_reply);
 
         let info = CtAttrBuilder::new(CTA_PROTOINFO_TCP)
@@ -136,10 +162,10 @@ impl Nla for ProtocolInfoTcp {
     }
 }
 
-impl TryFrom<CtAttr> for ProtocolInfoTcp {
+impl TryFrom<ConntrackAttribute> for ProtocolInfoTcp {
     type Error = DecodeError;
 
-    fn try_from(attr: CtAttr) -> Result<Self, Self::Error> {
+    fn try_from(attr: ConntrackAttribute) -> Result<Self, Self::Error> {
         if let Some(attrs) = attr.nested {
             let mut info = ProtocolInfoTcp::default();
             for attr in attrs.iter() {
@@ -157,7 +183,9 @@ impl TryFrom<CtAttr> for ProtocolInfoTcp {
                     CTA_PROTOINFO_TCP_WSCALE_ORIGINAL => {
                         if let Some(v) = &attr.value {
                             if v.len() != 1 {
-                                return Err(DecodeError::from("invalid CTA_PROTOINFO_TCP_WSCALE_ORIGINAL value"));
+                                return Err(DecodeError::from(
+                                    "invalid CTA_PROTOINFO_TCP_WSCALE_ORIGINAL value",
+                                ));
                             }
                             info.wscale_original = v[0];
                         }
@@ -165,14 +193,16 @@ impl TryFrom<CtAttr> for ProtocolInfoTcp {
                     CTA_PROTOINFO_TCP_WSCALE_REPLY => {
                         if let Some(v) = &attr.value {
                             if v.len() != 1 {
-                                return Err(DecodeError::from("invalid CTA_PROTOINFO_TCP_WSCALE_REPLY value"));
+                                return Err(DecodeError::from(
+                                    "invalid CTA_PROTOINFO_TCP_WSCALE_REPLY value",
+                                ));
                             }
                             info.wscale_reply = v[0];
                         }
                     }
                     CTA_PROTOINFO_TCP_FLAGS_ORIGINAL => {
                         if let Some(v) = &attr.value {
-                            info.flgas_original = NativeEndian::read_u16(v);
+                            info.flags_original = NativeEndian::read_u16(v);
                         }
                     }
                     CTA_PROTOINFO_TCP_FLAGS_REPLY => {
@@ -213,7 +243,7 @@ mod tests {
             assert_eq!(info.state, 3);
             assert_eq!(info.wscale_original, 7);
             assert_eq!(info.wscale_reply, 7);
-            assert_eq!(info.flgas_original, 35);
+            assert_eq!(info.flags_original, 35);
             assert_eq!(info.flags_reply, 35);
         } else {
             panic!("invalid protocol info")
@@ -228,7 +258,7 @@ mod tests {
             assert_eq!(info.state, 3);
             assert_eq!(info.wscale_original, 7);
             assert_eq!(info.wscale_reply, 7);
-            assert_eq!(info.flgas_original, 35);
+            assert_eq!(info.flags_original, 35);
             assert_eq!(info.flags_reply, 35);
         } else {
             panic!("invalid protocol info")

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-pub mod message;
+mod message;
+pub use message::CtNetlinkMessage;
 pub mod nlas;

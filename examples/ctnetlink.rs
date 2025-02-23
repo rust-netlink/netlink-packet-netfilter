@@ -9,8 +9,8 @@ use netlink_packet_core::{
 use netlink_packet_netfilter::{
     constants::{AF_INET, NFNETLINK_V0},
     ctnetlink::{
-        message::CtNetlinkMessage,
-        nlas::flow::{ip_tuple::TupleNla, nla::FlowNla},
+        nlas::flow::{ip_tuple::TupleNla, nla::FlowAttribute},
+        CtNetlinkMessage,
     },
     NetfilterHeader, NetfilterMessage, NetfilterMessageInner,
 };
@@ -61,7 +61,7 @@ fn main() {
                 ) = ct.inner
                 {
                     for nla in nlas.iter() {
-                        if let FlowNla::Orig(attrs) = nla {
+                        if let FlowAttribute::Orig(attrs) = nla {
                             orig = Some(attrs.clone())
                         }
                     }
@@ -252,7 +252,7 @@ fn get_request(
         hdr,
         NetlinkPayload::from(NetfilterMessage::new(
             NetfilterHeader::new(family, NFNETLINK_V0, res_id),
-            CtNetlinkMessage::Get(Some(vec![FlowNla::Orig(tuple)])),
+            CtNetlinkMessage::Get(Some(vec![FlowAttribute::Orig(tuple)])),
         )),
     );
     message.finalize();
@@ -270,7 +270,7 @@ fn delete_request(
         hdr,
         NetlinkPayload::from(NetfilterMessage::new(
             NetfilterHeader::new(family, NFNETLINK_V0, res_id),
-            CtNetlinkMessage::Delete(vec![FlowNla::Orig(tuple)]),
+            CtNetlinkMessage::Delete(vec![FlowAttribute::Orig(tuple)]),
         )),
     );
     message.finalize();

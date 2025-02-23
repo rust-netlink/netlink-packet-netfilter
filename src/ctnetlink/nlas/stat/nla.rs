@@ -6,23 +6,24 @@ use netlink_packet_utils::{
     Parseable,
 };
 
-use crate::constants::{
-    CTA_STATS_CHAIN_TOOLONG, CTA_STATS_CLASH_RESOLVE, CTA_STATS_DELETE,
-    CTA_STATS_DELETE_LIST, CTA_STATS_DROP, CTA_STATS_EARLY_DROP,
-    CTA_STATS_ERROR, CTA_STATS_FOUND, CTA_STATS_IGNORE, CTA_STATS_INSERT,
-    CTA_STATS_INSERT_FAILED, CTA_STATS_INVALID, CTA_STATS_NEW,
-    CTA_STATS_SEARCHED, CTA_STATS_SEARCH_RESTART,
-};
+const CTA_STATS_FOUND: u16 = 2;
+const CTA_STATS_INVALID: u16 = 4;
+const CTA_STATS_INSERT: u16 = 8;
+const CTA_STATS_INSERT_FAILED: u16 = 9;
+const CTA_STATS_DROP: u16 = 10;
+const CTA_STATS_EARLY_DROP: u16 = 11;
+const CTA_STATS_ERROR: u16 = 12;
+const CTA_STATS_SEARCH_RESTART: u16 = 13;
+const CTA_STATS_CLASH_RESOLVE: u16 = 14;
+const CTA_STATS_CHAIN_TOOLONG: u16 = 15;
+
+const CTA_STATS_GLOBAL_ENTRIES: u16 = 1;
+const CTA_STATS_GLOBAL_MAX_ENTRIES: u16 = 2;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum StatNla {
-    Searched(u32), // no longer used
+pub enum StatCpuAttribute {
     Found(u32),
-    New(u32), // no longer used
     Invalid(u32),
-    Ignore(u32),     // no longer used
-    Delete(u32),     // no longer used
-    DeleteList(u32), // no longer used
     Insert(u32),
     InsertFailed(u32),
     Drop(u32),
@@ -34,73 +35,70 @@ pub enum StatNla {
     Other(DefaultNla),
 }
 
-impl Nla for StatNla {
+impl Nla for StatCpuAttribute {
     fn value_len(&self) -> usize {
         match self {
-            StatNla::Searched(_) => 4,
-            StatNla::Found(_) => 4,
-            StatNla::New(_) => 4,
-            StatNla::Invalid(_) => 4,
-            StatNla::Ignore(_) => 4,
-            StatNla::Delete(_) => 4,
-            StatNla::DeleteList(_) => 4,
-            StatNla::Insert(_) => 4,
-            StatNla::InsertFailed(_) => 4,
-            StatNla::Drop(_) => 4,
-            StatNla::EarlyDrop(_) => 4,
-            StatNla::Error(_) => 4,
-            StatNla::SearchRestart(_) => 4,
-            StatNla::ClashResolve(_) => 4,
-            StatNla::ChainTooLong(_) => 4,
-            StatNla::Other(nla) => nla.value_len(),
+            StatCpuAttribute::Found(_) => 4,
+            StatCpuAttribute::Invalid(_) => 4,
+            StatCpuAttribute::Insert(_) => 4,
+            StatCpuAttribute::InsertFailed(_) => 4,
+            StatCpuAttribute::Drop(_) => 4,
+            StatCpuAttribute::EarlyDrop(_) => 4,
+            StatCpuAttribute::Error(_) => 4,
+            StatCpuAttribute::SearchRestart(_) => 4,
+            StatCpuAttribute::ClashResolve(_) => 4,
+            StatCpuAttribute::ChainTooLong(_) => 4,
+            StatCpuAttribute::Other(nla) => nla.value_len(),
         }
     }
 
     fn kind(&self) -> u16 {
         match self {
-            StatNla::Searched(_) => CTA_STATS_SEARCHED,
-            StatNla::Found(_) => CTA_STATS_FOUND,
-            StatNla::New(_) => CTA_STATS_NEW,
-            StatNla::Invalid(_) => CTA_STATS_INVALID,
-            StatNla::Ignore(_) => CTA_STATS_IGNORE,
-            StatNla::Delete(_) => CTA_STATS_DELETE,
-            StatNla::DeleteList(_) => CTA_STATS_DELETE_LIST,
-            StatNla::Insert(_) => CTA_STATS_INSERT,
-            StatNla::InsertFailed(_) => CTA_STATS_INSERT_FAILED,
-            StatNla::Drop(_) => CTA_STATS_DROP,
-            StatNla::EarlyDrop(_) => CTA_STATS_EARLY_DROP,
-            StatNla::Error(_) => CTA_STATS_ERROR,
-            StatNla::SearchRestart(_) => CTA_STATS_SEARCH_RESTART,
-            StatNla::ClashResolve(_) => CTA_STATS_CLASH_RESOLVE,
-            StatNla::ChainTooLong(_) => CTA_STATS_CHAIN_TOOLONG,
-            StatNla::Other(nla) => nla.kind(),
+            StatCpuAttribute::Found(_) => CTA_STATS_FOUND,
+            StatCpuAttribute::Invalid(_) => CTA_STATS_INVALID,
+            StatCpuAttribute::Insert(_) => CTA_STATS_INSERT,
+            StatCpuAttribute::InsertFailed(_) => CTA_STATS_INSERT_FAILED,
+            StatCpuAttribute::Drop(_) => CTA_STATS_DROP,
+            StatCpuAttribute::EarlyDrop(_) => CTA_STATS_EARLY_DROP,
+            StatCpuAttribute::Error(_) => CTA_STATS_ERROR,
+            StatCpuAttribute::SearchRestart(_) => CTA_STATS_SEARCH_RESTART,
+            StatCpuAttribute::ClashResolve(_) => CTA_STATS_CLASH_RESOLVE,
+            StatCpuAttribute::ChainTooLong(_) => CTA_STATS_CHAIN_TOOLONG,
+            StatCpuAttribute::Other(nla) => nla.kind(),
         }
     }
 
     fn emit_value(&self, buffer: &mut [u8]) {
         match self {
-            StatNla::Searched(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::Found(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::New(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::Invalid(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::Ignore(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::Delete(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::DeleteList(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::Insert(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::InsertFailed(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::Drop(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::EarlyDrop(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::Error(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::SearchRestart(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::ClashResolve(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::ChainTooLong(val) => BigEndian::write_u32(buffer, *val),
-            StatNla::Other(attr) => attr.emit_value(buffer),
+            StatCpuAttribute::Found(val) => BigEndian::write_u32(buffer, *val),
+            StatCpuAttribute::Invalid(val) => {
+                BigEndian::write_u32(buffer, *val)
+            }
+            StatCpuAttribute::Insert(val) => BigEndian::write_u32(buffer, *val),
+            StatCpuAttribute::InsertFailed(val) => {
+                BigEndian::write_u32(buffer, *val)
+            }
+            StatCpuAttribute::Drop(val) => BigEndian::write_u32(buffer, *val),
+            StatCpuAttribute::EarlyDrop(val) => {
+                BigEndian::write_u32(buffer, *val)
+            }
+            StatCpuAttribute::Error(val) => BigEndian::write_u32(buffer, *val),
+            StatCpuAttribute::SearchRestart(val) => {
+                BigEndian::write_u32(buffer, *val)
+            }
+            StatCpuAttribute::ClashResolve(val) => {
+                BigEndian::write_u32(buffer, *val)
+            }
+            StatCpuAttribute::ChainTooLong(val) => {
+                BigEndian::write_u32(buffer, *val)
+            }
+            StatCpuAttribute::Other(attr) => attr.emit_value(buffer),
         }
     }
 }
 
 impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
-    for StatNla
+    for StatCpuAttribute
 {
     fn parse(
         buf: &NlaBuffer<&'buffer T>,
@@ -108,36 +106,95 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
         let kind = buf.kind();
         let payload = buf.value();
         let nla = match kind {
-            CTA_STATS_SEARCHED => {
-                StatNla::Searched(BigEndian::read_u32(payload))
+            CTA_STATS_FOUND => {
+                StatCpuAttribute::Found(BigEndian::read_u32(payload))
             }
-            CTA_STATS_FOUND => StatNla::Found(BigEndian::read_u32(payload)),
-            CTA_STATS_NEW => StatNla::New(BigEndian::read_u32(payload)),
-            CTA_STATS_INVALID => StatNla::Invalid(BigEndian::read_u32(payload)),
-            CTA_STATS_IGNORE => StatNla::Ignore(BigEndian::read_u32(payload)),
-            CTA_STATS_DELETE => StatNla::Delete(BigEndian::read_u32(payload)),
-            CTA_STATS_DELETE_LIST => {
-                StatNla::DeleteList(BigEndian::read_u32(payload))
+            CTA_STATS_INVALID => {
+                StatCpuAttribute::Invalid(BigEndian::read_u32(payload))
             }
-            CTA_STATS_INSERT => StatNla::Insert(BigEndian::read_u32(payload)),
+            CTA_STATS_INSERT => {
+                StatCpuAttribute::Insert(BigEndian::read_u32(payload))
+            }
             CTA_STATS_INSERT_FAILED => {
-                StatNla::InsertFailed(BigEndian::read_u32(payload))
+                StatCpuAttribute::InsertFailed(BigEndian::read_u32(payload))
             }
-            CTA_STATS_DROP => StatNla::Drop(BigEndian::read_u32(payload)),
+            CTA_STATS_DROP => {
+                StatCpuAttribute::Drop(BigEndian::read_u32(payload))
+            }
             CTA_STATS_EARLY_DROP => {
-                StatNla::EarlyDrop(BigEndian::read_u32(payload))
+                StatCpuAttribute::EarlyDrop(BigEndian::read_u32(payload))
             }
-            CTA_STATS_ERROR => StatNla::Error(BigEndian::read_u32(payload)),
+            CTA_STATS_ERROR => {
+                StatCpuAttribute::Error(BigEndian::read_u32(payload))
+            }
             CTA_STATS_SEARCH_RESTART => {
-                StatNla::SearchRestart(BigEndian::read_u32(payload))
+                StatCpuAttribute::SearchRestart(BigEndian::read_u32(payload))
             }
             CTA_STATS_CLASH_RESOLVE => {
-                StatNla::ClashResolve(BigEndian::read_u32(payload))
+                StatCpuAttribute::ClashResolve(BigEndian::read_u32(payload))
             }
             CTA_STATS_CHAIN_TOOLONG => {
-                StatNla::ChainTooLong(BigEndian::read_u32(payload))
+                StatCpuAttribute::ChainTooLong(BigEndian::read_u32(payload))
             }
-            _ => StatNla::Other(DefaultNla::parse(buf)?),
+            _ => StatCpuAttribute::Other(DefaultNla::parse(buf)?),
+        };
+        Ok(nla)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum StatGlobalAttribute {
+    Entries(u32),
+    MaxEntries(u32),
+    Other(DefaultNla),
+}
+
+impl Nla for StatGlobalAttribute {
+    fn value_len(&self) -> usize {
+        match self {
+            StatGlobalAttribute::Entries(_) => 4,
+            StatGlobalAttribute::MaxEntries(_) => 4,
+            StatGlobalAttribute::Other(nla) => nla.value_len(),
+        }
+    }
+
+    fn kind(&self) -> u16 {
+        match self {
+            StatGlobalAttribute::Entries(_) => CTA_STATS_GLOBAL_ENTRIES,
+            StatGlobalAttribute::MaxEntries(_) => CTA_STATS_GLOBAL_MAX_ENTRIES,
+            StatGlobalAttribute::Other(nla) => nla.kind(),
+        }
+    }
+
+    fn emit_value(&self, buffer: &mut [u8]) {
+        match self {
+            StatGlobalAttribute::Entries(val) => {
+                BigEndian::write_u32(buffer, *val)
+            }
+            StatGlobalAttribute::MaxEntries(val) => {
+                BigEndian::write_u32(buffer, *val)
+            }
+            StatGlobalAttribute::Other(attr) => attr.emit_value(buffer),
+        }
+    }
+}
+
+impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
+    for StatGlobalAttribute
+{
+    fn parse(
+        buf: &NlaBuffer<&'buffer T>,
+    ) -> Result<Self, netlink_packet_utils::DecodeError> {
+        let kind = buf.kind();
+        let payload = buf.value();
+        let nla = match kind {
+            CTA_STATS_GLOBAL_ENTRIES => {
+                StatGlobalAttribute::Entries(BigEndian::read_u32(payload))
+            }
+            CTA_STATS_GLOBAL_MAX_ENTRIES => {
+                StatGlobalAttribute::MaxEntries(BigEndian::read_u32(payload))
+            }
+            _ => StatGlobalAttribute::Other(DefaultNla::parse(buf)?),
         };
         Ok(nla)
     }
