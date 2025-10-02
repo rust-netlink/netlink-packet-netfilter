@@ -2,14 +2,10 @@
 
 use std::ffi::{CStr, CString};
 
-use anyhow::Context;
-use byteorder::{BigEndian, ByteOrder};
 use derive_more::{From, IsVariant};
-
-use netlink_packet_utils::{
-    nla::{DefaultNla, Nla, NlaBuffer},
-    parsers::{parse_u16_be, parse_u32_be},
-    DecodeError, Parseable,
+use netlink_packet_core::{
+    emit_u16_be, emit_u32_be, parse_u16_be, parse_u32_be, DecodeError,
+    DefaultNla, ErrorContext, Nla, NlaBuffer, Parseable,
 };
 
 use crate::{
@@ -102,33 +98,45 @@ impl Nla for PacketNla {
     fn emit_value(&self, buffer: &mut [u8]) {
         match self {
             PacketNla::PacketHdr(attr) => attr.emit_value(buffer),
-            PacketNla::Mark(value) => BigEndian::write_u32(buffer, *value),
+            PacketNla::Mark(value) => {
+                emit_u32_be(buffer, *value).unwrap();
+            }
             PacketNla::Timestamp(attr) => attr.emit_value(buffer),
             PacketNla::IfIndexInDev(value) => {
-                BigEndian::write_u32(buffer, *value)
+                emit_u32_be(buffer, *value).unwrap();
             }
             PacketNla::IfIndexOutDev(value) => {
-                BigEndian::write_u32(buffer, *value)
+                emit_u32_be(buffer, *value).unwrap();
             }
             PacketNla::IfIndexPhysInDev(value) => {
-                BigEndian::write_u32(buffer, *value)
+                emit_u32_be(buffer, *value).unwrap();
             }
             PacketNla::IfIndexPhysOutDev(value) => {
-                BigEndian::write_u32(buffer, *value)
+                emit_u32_be(buffer, *value).unwrap();
             }
             PacketNla::HwAddr(attr) => attr.emit_value(buffer),
             PacketNla::Payload(vec) => buffer.copy_from_slice(vec),
             PacketNla::Prefix(cstring) => {
                 buffer.copy_from_slice(cstring.as_bytes_with_nul())
             }
-            PacketNla::Uid(value) => BigEndian::write_u32(buffer, *value),
-            PacketNla::Seq(value) => BigEndian::write_u32(buffer, *value),
-            PacketNla::SeqGlobal(value) => BigEndian::write_u32(buffer, *value),
-            PacketNla::Gid(value) => BigEndian::write_u32(buffer, *value),
-            PacketNla::HwType(value) => BigEndian::write_u16(buffer, *value),
+            PacketNla::Uid(value) => {
+                emit_u32_be(buffer, *value).unwrap();
+            }
+            PacketNla::Seq(value) => {
+                emit_u32_be(buffer, *value).unwrap();
+            }
+            PacketNla::SeqGlobal(value) => {
+                emit_u32_be(buffer, *value).unwrap();
+            }
+            PacketNla::Gid(value) => {
+                emit_u32_be(buffer, *value).unwrap();
+            }
+            PacketNla::HwType(value) => {
+                emit_u16_be(buffer, *value).unwrap();
+            }
             PacketNla::HwHeader(vec) => buffer.copy_from_slice(vec),
             PacketNla::HwHeaderLen(value) => {
-                BigEndian::write_u16(buffer, *value)
+                emit_u16_be(buffer, *value).unwrap();
             }
             PacketNla::Other(attr) => attr.emit_value(buffer),
         }
@@ -180,6 +188,7 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
             NFULA_PAYLOAD => PacketNla::Payload(payload.to_vec()),
             NFULA_PREFIX => PacketNla::Prefix(
                 CStr::from_bytes_with_nul(payload)
+                    .map_err(|e| DecodeError::from(e.to_string()))
                     .context("invalid NFULA_PREFIX value")?
                     .to_owned(),
             ),

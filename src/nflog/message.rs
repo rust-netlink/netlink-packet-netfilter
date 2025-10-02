@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-use netlink_packet_utils::{
-    nla::DefaultNla, DecodeError, Emitable, Parseable, ParseableParametrized,
+use netlink_packet_core::{
+    DecodeError, DefaultNla, Emitable, Parseable, ParseableParametrized,
 };
 
 use crate::{

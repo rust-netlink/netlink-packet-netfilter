@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-use netlink_packet_utils::{buffer, errors::DecodeError, nla::Nla, Parseable};
+use netlink_packet_core::{
+    buffer, fields, getter, setter, DecodeError, Nla, Parseable,
+};
 
 const NFULA_CFG_MODE: u16 = libc::NFULA_CFG_MODE as u16;
 const NFULNL_COPY_NONE: u8 = libc::NFULNL_COPY_NONE as u8;

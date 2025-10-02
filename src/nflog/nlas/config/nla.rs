@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-use anyhow::Context;
-use byteorder::{BigEndian, ByteOrder};
 use derive_more::{From, IsVariant};
-use netlink_packet_utils::{
-    nla::{DefaultNla, Nla, NlaBuffer},
-    parsers::{parse_u16_be, parse_u32_be, parse_u8},
-    DecodeError, Parseable,
+use netlink_packet_core::{
+    emit_u32_be, parse_u16_be, parse_u32_be, parse_u8, DecodeError, DefaultNla,
+    ErrorContext, Nla, NlaBuffer, Parseable,
 };
 
 use crate::{
@@ -63,11 +60,11 @@ impl Nla for ConfigNla {
             ConfigNla::Cmd(attr) => attr.emit_value(buffer),
             ConfigNla::Mode(attr) => attr.emit_value(buffer),
             ConfigNla::NlBufSiz(buf_siz) => {
-                BigEndian::write_u32(buffer, *buf_siz)
+                emit_u32_be(buffer, *buf_siz).unwrap();
             }
             ConfigNla::Timeout(attr) => attr.emit_value(buffer),
             ConfigNla::QThresh(q_thresh) => {
-                BigEndian::write_u32(buffer, *q_thresh)
+                emit_u32_be(buffer, *q_thresh).unwrap();
             }
             ConfigNla::Flags(attr) => attr.emit_value(buffer),
             ConfigNla::Other(attr) => attr.emit_value(buffer),

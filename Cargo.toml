@@ -12,10 +12,7 @@ repository = "https://github.com/rust-netlink/netlink-packet-netfilter"
 description = "netlink packet types for the netfilter subprotocol"
 
 [dependencies]
-anyhow = "1.0.32"
-byteorder = "1.3.4"
-netlink-packet-core = { version = "0.7.0" }
-netlink-packet-utils = { version = "0.5.1" }
+netlink-packet-core = { version = "0.8.1" }
 bitflags = "2.3"
 libc = "0.2.77"
 derive_more = "0.99.16"

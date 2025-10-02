@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-use netlink_packet_utils::{buffer, nla::Nla, DecodeError, Parseable};
+use netlink_packet_core::{
+    buffer, fields, getter, setter, DecodeError, Nla, Parseable,
+};
 
 use crate::constants::NFULA_HWADDR;
 

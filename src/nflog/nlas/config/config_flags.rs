@@ -3,8 +3,7 @@
 use std::mem::size_of;
 
 use bitflags::bitflags;
-use byteorder::{BigEndian, ByteOrder};
-use netlink_packet_utils::nla::Nla;
+use netlink_packet_core::{emit_u16_be, Nla};
 
 const NFULA_CFG_FLAGS: u16 = libc::NFULA_CFG_FLAGS as u16;
 
@@ -34,6 +33,6 @@ impl Nla for ConfigFlags {
     }
 
     fn emit_value(&self, buffer: &mut [u8]) {
-        BigEndian::write_u16(buffer, self.bits());
+        emit_u16_be(buffer, self.bits()).unwrap();
     }
 }
