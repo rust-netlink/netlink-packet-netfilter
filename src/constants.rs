@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-pub use netlink_packet_core::constants::*;
-
 pub const AF_UNSPEC: u8 = libc::AF_UNSPEC as u8;
 pub const AF_UNIX: u8 = libc::AF_UNIX as u8;
 pub const AF_LOCAL: u8 = libc::AF_LOCAL as u8;

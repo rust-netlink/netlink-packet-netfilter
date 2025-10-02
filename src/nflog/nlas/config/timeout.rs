@@ -2,8 +2,7 @@
 
 use std::{convert::TryInto, mem::size_of, time::Duration};
 
-use byteorder::{BigEndian, ByteOrder};
-use netlink_packet_utils::nla::Nla;
+use netlink_packet_core::{emit_u32_be, Nla};
 
 const NFULA_CFG_TIMEOUT: u16 = libc::NFULA_CFG_TIMEOUT as u16;
 
@@ -36,6 +35,6 @@ impl Nla for Timeout {
     }
 
     fn emit_value(&self, buffer: &mut [u8]) {
-        BigEndian::write_u32(buffer, self.hundredth);
+        emit_u32_be(buffer, self.hundredth).unwrap();
     }
 }

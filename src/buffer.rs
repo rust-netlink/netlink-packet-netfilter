@@ -7,11 +7,9 @@ use crate::{
     },
     nflog::NfLogMessage,
 };
-use anyhow::Context;
-use netlink_packet_utils::{
-    buffer,
-    nla::{DefaultNla, NlaBuffer, NlasIterator},
-    DecodeError, Parseable, ParseableParametrized,
+use netlink_packet_core::{
+    buffer, fields, DecodeError, DefaultNla, ErrorContext, NlaBuffer,
+    NlasIterator, Parseable, ParseableParametrized,
 };
 
 buffer!(NetfilterBuffer(NETFILTER_HEADER_LEN) {
@@ -30,11 +28,10 @@ impl<'a, T: AsRef<[u8]> + ?Sized> NetfilterBuffer<&'a T> {
     where
         F: Fn(NlaBuffer<&[u8]>) -> Result<U, DecodeError>,
     {
-        Ok(self
-            .nlas()
+        self.nlas()
             .map(|buf| f(buf?))
             .collect::<Result<Vec<_>, _>>()
-            .context("failed to parse NLAs")?)
+            .context("failed to parse NLAs")
     }
 
     pub fn default_nlas(&self) -> Result<Vec<DefaultNla>, DecodeError> {

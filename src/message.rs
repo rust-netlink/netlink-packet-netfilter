@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
+    buffer, fields, getter, setter, DecodeError, DefaultNla, Emitable,
     NetlinkDeserializable, NetlinkHeader, NetlinkPayload, NetlinkSerializable,
-};
-use netlink_packet_utils::{
-    buffer, nla::DefaultNla, DecodeError, Emitable, Parseable,
-    ParseableParametrized,
+    Parseable, ParseableParametrized,
 };
 
 use crate::{buffer::NetfilterBuffer, nflog::NfLogMessage};
