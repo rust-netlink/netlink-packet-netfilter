@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
+    conntrack::ConntrackMessage,
     message::{
         NetfilterHeader, NetfilterMessage, NetfilterMessageInner,
         NETFILTER_HEADER_LEN,
@@ -57,10 +58,14 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
                 NfLogMessage::parse_with_param(buf, message_type)
                     .context("failed to parse nflog payload")?,
             ),
+            ConntrackMessage::SUBSYS => NetfilterMessageInner::Conntrack(
+                ConntrackMessage::parse_with_param(buf, message_type)
+                    .context("failed to parse conntrack payload")?,
+            ),
             _ => NetfilterMessageInner::Other {
                 subsys,
                 message_type,
-                nlas: buf.default_nlas()?,
+                attributes: buf.default_nlas()?,
             },
         };
         Ok(NetfilterMessage::new(header, inner))
