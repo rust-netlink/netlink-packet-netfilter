@@ -6,9 +6,11 @@ use netlink_packet_core::{
     Parseable, ParseableParametrized,
 };
 
-use crate::{buffer::NetfilterBuffer, nflog::NfLogMessage};
+use crate::{
+    buffer::NetfilterBuffer, conntrack::ConntrackMessage, nflog::NfLogMessage,
+};
 
-pub const NETFILTER_HEADER_LEN: usize = 4;
+pub(crate) const NETFILTER_HEADER_LEN: usize = 4;
 
 buffer!(NetfilterHeaderBuffer(NETFILTER_HEADER_LEN) {
     family: (u8, 0),
@@ -17,6 +19,7 @@ buffer!(NetfilterHeaderBuffer(NETFILTER_HEADER_LEN) {
 });
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct NetfilterHeader {
     pub family: u8,
     pub version: u8,
@@ -58,12 +61,14 @@ impl<T: AsRef<[u8]>> Parseable<NetfilterHeaderBuffer<T>> for NetfilterHeader {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[non_exhaustive]
 pub enum NetfilterMessageInner {
     NfLog(NfLogMessage),
+    Conntrack(ConntrackMessage),
     Other {
         subsys: u8,
         message_type: u8,
-        nlas: Vec<DefaultNla>,
+        attributes: Vec<DefaultNla>,
     },
 }
 
@@ -72,13 +77,19 @@ impl From<NfLogMessage> for NetfilterMessageInner {
         Self::NfLog(message)
     }
 }
+impl From<ConntrackMessage> for NetfilterMessageInner {
+    fn from(message: ConntrackMessage) -> Self {
+        Self::Conntrack(message)
+    }
+}
 
 impl Emitable for NetfilterMessageInner {
     fn buffer_len(&self) -> usize {
         match self {
             NetfilterMessageInner::NfLog(message) => message.buffer_len(),
-            NetfilterMessageInner::Other { nlas, .. } => {
-                nlas.as_slice().buffer_len()
+            NetfilterMessageInner::Conntrack(message) => message.buffer_len(),
+            NetfilterMessageInner::Other { attributes, .. } => {
+                attributes.as_slice().buffer_len()
             }
         }
     }
@@ -86,14 +97,16 @@ impl Emitable for NetfilterMessageInner {
     fn emit(&self, buffer: &mut [u8]) {
         match self {
             NetfilterMessageInner::NfLog(message) => message.emit(buffer),
-            NetfilterMessageInner::Other { nlas, .. } => {
-                nlas.as_slice().emit(buffer)
+            NetfilterMessageInner::Conntrack(message) => message.emit(buffer),
+            NetfilterMessageInner::Other { attributes, .. } => {
+                attributes.as_slice().emit(buffer)
             }
         }
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[non_exhaustive]
 pub struct NetfilterMessage {
     pub header: NetfilterHeader,
     pub inner: NetfilterMessageInner,
@@ -113,6 +126,7 @@ impl NetfilterMessage {
     pub fn subsys(&self) -> u8 {
         match self.inner {
             NetfilterMessageInner::NfLog(_) => NfLogMessage::SUBSYS,
+            NetfilterMessageInner::Conntrack(_) => ConntrackMessage::SUBSYS,
             NetfilterMessageInner::Other { subsys, .. } => subsys,
         }
     }
@@ -120,6 +134,9 @@ impl NetfilterMessage {
     pub fn message_type(&self) -> u8 {
         match self.inner {
             NetfilterMessageInner::NfLog(ref message) => message.message_type(),
+            NetfilterMessageInner::Conntrack(ref message) => {
+                message.message_type()
+            }
             NetfilterMessageInner::Other { message_type, .. } => message_type,
         }
     }
