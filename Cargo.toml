@@ -1,14 +1,14 @@
 [package]
 authors = ["Loïc Damien <loic.damien@dzamlo.ch>"]
-name = "netlink-packet-netfilter"
+name = "reyzell-netlink-packet-netfilter"
 version = "0.2.0"
 edition = "2018"
 
-homepage = "https://github.com/rust-netlink/netlink-packet-netfilter"
+homepage = "https://github.com/reyzell/netlink-packet-netfilter"
 keywords = ["netlink", "linux", "netfilter"]
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/rust-netlink/netlink-packet-netfilter"
+repository = "https://github.com/reyzell/netlink-packet-netfilter"
 description = "netlink packet types for the netfilter subprotocol"
 
 [dependencies]
