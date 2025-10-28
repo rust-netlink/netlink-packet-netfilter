@@ -3,10 +3,10 @@
 use crate::{
     conntrack::ConntrackMessage,
     message::{
-        NetfilterHeader, NetfilterMessage, NetfilterMessageInner,
+        NetfilterHeader, NetfilterMessage, NetfilterMessageInner, Subsystem,
         NETFILTER_HEADER_LEN,
     },
-    nflog::NfLogMessage,
+    nflog::ULogMessage,
 };
 use netlink_packet_core::{
     buffer, fields, DecodeError, DefaultNla, ErrorContext, NlaBuffer,
@@ -53,17 +53,17 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
             .context("failed to parse netfilter header")?;
         let subsys = (message_type >> 8) as u8;
         let message_type = message_type as u8;
-        let inner = match subsys {
-            NfLogMessage::SUBSYS => NetfilterMessageInner::NfLog(
-                NfLogMessage::parse_with_param(buf, message_type)
+        let inner = match Subsystem::from(subsys) {
+            Subsystem::ULog => NetfilterMessageInner::ULog(
+                ULogMessage::parse_with_param(buf, message_type)
                     .context("failed to parse nflog payload")?,
             ),
-            ConntrackMessage::SUBSYS => NetfilterMessageInner::Conntrack(
+            Subsystem::Conntrack => NetfilterMessageInner::Conntrack(
                 ConntrackMessage::parse_with_param(buf, message_type)
                     .context("failed to parse conntrack payload")?,
             ),
-            _ => NetfilterMessageInner::Other {
-                subsys,
+            subsys_enum @ Subsystem::Other(_) => NetfilterMessageInner::Other {
+                subsys: subsys_enum,
                 message_type,
                 attributes: buf.default_nlas()?,
             },
