@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 mod message;
-pub use message::NfLogMessage;
+pub use message::{ULogMessage, ULogMessageType};
 pub mod nlas;
 
 use netlink_packet_core::{
@@ -24,7 +24,7 @@ pub fn config_request(
         hdr,
         NetlinkPayload::from(NetfilterMessage::new(
             NetfilterHeader::new(family, NFNETLINK_V0, group_num),
-            NfLogMessage::Config(nlas),
+            ULogMessage::Config(nlas),
         )),
     );
     message.finalize();

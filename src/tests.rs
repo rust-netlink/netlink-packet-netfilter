@@ -2,16 +2,16 @@
 
 use std::net::IpAddr;
 
-use libc::NFNL_SUBSYS_CTNETLINK;
 use netlink_packet_core::{Emitable, ParseableParametrized};
 
 use crate::{
     buffer::NetfilterBuffer,
     conntrack::{
-        ConntrackAttribute, ConntrackMessage, IPTuple, ProtoInfo, ProtoInfoTCP,
-        ProtoTuple, Protocol, TCPFlags, Tuple,
+        ConntrackAttribute, ConntrackMessage, ConntrackMessageType, IPTuple,
+        ProtoInfo, ProtoInfoTCP, ProtoTuple, Protocol, TCPFlags, Tuple,
     },
-    constants::{AF_INET, AF_INET6, AF_UNSPEC, IPCTNL_MSG_CT_GET},
+    constants::{AF_INET, AF_INET6, AF_UNSPEC},
+    message::Subsystem,
     NetfilterHeader, NetfilterMessage,
 };
 
@@ -32,8 +32,8 @@ fn test_dump_conntrack() {
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
 
-    let message_type =
-        ((NFNL_SUBSYS_CTNETLINK as u16) << 8) | (IPCTNL_MSG_CT_GET as u16);
+    let message_type = ((u8::from(Subsystem::Conntrack) as u16) << 8)
+        | (u8::from(ConntrackMessageType::Get) as u16);
     // Check if the deserialization was correct
     assert_eq!(
         NetfilterMessage::parse_with_param(
@@ -100,8 +100,8 @@ fn test_get_conntrack_tcp_ipv4() {
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
 
-    let message_type =
-        ((NFNL_SUBSYS_CTNETLINK as u16) << 8) | (IPCTNL_MSG_CT_GET as u16);
+    let message_type = ((u8::from(Subsystem::Conntrack) as u16) << 8)
+        | (u8::from(ConntrackMessageType::Get) as u16);
     // Check if the deserialization was correct
     assert_eq!(
         NetfilterMessage::parse_with_param(
@@ -158,8 +158,8 @@ fn test_get_conntrack_udp_ipv6() {
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
 
-    let message_type =
-        ((NFNL_SUBSYS_CTNETLINK as u16) << 8) | (IPCTNL_MSG_CT_GET as u16);
+    let message_type = ((u8::from(Subsystem::Conntrack) as u16) << 8)
+        | (u8::from(ConntrackMessageType::Get) as u16);
     // Check if the deserialization was correct
     assert_eq!(
         NetfilterMessage::parse_with_param(

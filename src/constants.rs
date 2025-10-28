@@ -43,10 +43,8 @@ pub const AF_ALG: u8 = libc::AF_ALG as u8;
 pub const NFNETLINK_V0: u8 = libc::NFNETLINK_V0 as u8;
 
 pub const NFNL_SUBSYS_NONE: u8 = libc::NFNL_SUBSYS_NONE as u8;
-pub const NFNL_SUBSYS_CTNETLINK: u8 = libc::NFNL_SUBSYS_CTNETLINK as u8;
 pub const NFNL_SUBSYS_CTNETLINK_EXP: u8 = libc::NFNL_SUBSYS_CTNETLINK_EXP as u8;
 pub const NFNL_SUBSYS_QUEUE: u8 = libc::NFNL_SUBSYS_QUEUE as u8;
-pub const NFNL_SUBSYS_ULOG: u8 = libc::NFNL_SUBSYS_ULOG as u8;
 pub const NFNL_SUBSYS_OSF: u8 = libc::NFNL_SUBSYS_OSF as u8;
 pub const NFNL_SUBSYS_IPSET: u8 = libc::NFNL_SUBSYS_IPSET as u8;
 pub const NFNL_SUBSYS_ACCT: u8 = libc::NFNL_SUBSYS_ACCT as u8;
@@ -83,8 +81,3 @@ pub const NFULA_HWHEADER: u16 = libc::NFULA_HWHEADER as u16;
 pub const NFULA_HWLEN: u16 = libc::NFULA_HWLEN as u16;
 pub const NFULA_CT: u16 = libc::NFULA_CT as u16;
 pub const NFULA_CT_INFO: u16 = libc::NFULA_CT_INFO as u16;
-
-pub const NFULNL_MSG_CONFIG: u8 = libc::NFULNL_MSG_CONFIG as u8;
-pub const NFULNL_MSG_PACKET: u8 = libc::NFULNL_MSG_PACKET as u8;
-
-pub(crate) const IPCTNL_MSG_CT_GET: u8 = 1;

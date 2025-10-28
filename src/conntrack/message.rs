@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    buffer::NetfilterBuffer,
-    conntrack::attributes::ConntrackAttribute,
-    constants::{IPCTNL_MSG_CT_GET, NFNL_SUBSYS_CTNETLINK},
+    buffer::NetfilterBuffer, conntrack::attributes::ConntrackAttribute,
 };
 use netlink_packet_core::{
     DecodeError, DefaultNla, Emitable, Parseable, ParseableParametrized,
@@ -19,13 +17,40 @@ pub enum ConntrackMessage {
     },
 }
 
-impl ConntrackMessage {
-    pub(crate) const SUBSYS: u8 = NFNL_SUBSYS_CTNETLINK;
+const IPCTNL_MSG_CT_GET: u8 = 1;
 
-    pub fn message_type(&self) -> u8 {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ConntrackMessageType {
+    Get,
+    Other(u8),
+}
+
+impl From<u8> for ConntrackMessageType {
+    fn from(value: u8) -> Self {
+        match value {
+            IPCTNL_MSG_CT_GET => Self::Get,
+            v => Self::Other(v),
+        }
+    }
+}
+
+impl From<ConntrackMessageType> for u8 {
+    fn from(value: ConntrackMessageType) -> Self {
+        match value {
+            ConntrackMessageType::Get => IPCTNL_MSG_CT_GET,
+            ConntrackMessageType::Other(v) => v,
+        }
+    }
+}
+
+impl ConntrackMessage {
+    pub fn message_type(&self) -> ConntrackMessageType {
         match self {
-            ConntrackMessage::Get(_) => IPCTNL_MSG_CT_GET,
-            ConntrackMessage::Other { message_type, .. } => *message_type,
+            ConntrackMessage::Get(_) => ConntrackMessageType::Get,
+            ConntrackMessage::Other { message_type, .. } => {
+                (*message_type).into()
+            }
         }
     }
 }
@@ -61,17 +86,19 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
         buf: &NetfilterBuffer<&'a T>,
         message_type: u8,
     ) -> Result<Self, DecodeError> {
-        Ok(match message_type {
-            IPCTNL_MSG_CT_GET => {
+        Ok(match ConntrackMessageType::from(message_type) {
+            ConntrackMessageType::Get => {
                 let attributes = buf.parse_all_nlas(|nla_buf| {
                     ConntrackAttribute::parse(&nla_buf)
                 })?;
                 ConntrackMessage::Get(attributes)
             }
-            _ => ConntrackMessage::Other {
-                message_type,
-                attributes: buf.default_nlas()?,
-            },
+            ConntrackMessageType::Other(message_type) => {
+                ConntrackMessage::Other {
+                    message_type,
+                    attributes: buf.default_nlas()?,
+                }
+            }
         })
     }
 }

@@ -7,7 +7,7 @@ use netlink_packet_core::{
 };
 
 use crate::{
-    buffer::NetfilterBuffer, conntrack::ConntrackMessage, nflog::NfLogMessage,
+    buffer::NetfilterBuffer, conntrack::ConntrackMessage, nflog::ULogMessage,
 };
 
 pub(crate) const NETFILTER_HEADER_LEN: usize = 4;
@@ -60,21 +60,53 @@ impl<T: AsRef<[u8]>> Parseable<NetfilterHeaderBuffer<T>> for NetfilterHeader {
     }
 }
 
+// Defined in Linux kernel: include/uapi/linux/netfilter/nfnetlink.h
+pub const NFNL_SUBSYS_CTNETLINK: u8 = 1;
+pub const NFNL_SUBSYS_ULOG: u8 = 4;
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[non_exhaustive]
+pub enum Subsystem {
+    ULog,
+    Conntrack,
+    Other(u8),
+}
+
+impl From<u8> for Subsystem {
+    fn from(value: u8) -> Self {
+        match value {
+            NFNL_SUBSYS_ULOG => Self::ULog,
+            NFNL_SUBSYS_CTNETLINK => Self::Conntrack,
+            v => Self::Other(v),
+        }
+    }
+}
+
+impl From<Subsystem> for u8 {
+    fn from(value: Subsystem) -> Self {
+        match value {
+            Subsystem::ULog => NFNL_SUBSYS_ULOG,
+            Subsystem::Conntrack => NFNL_SUBSYS_CTNETLINK,
+            Subsystem::Other(v) => v,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[non_exhaustive]
 pub enum NetfilterMessageInner {
-    NfLog(NfLogMessage),
+    ULog(ULogMessage),
     Conntrack(ConntrackMessage),
     Other {
-        subsys: u8,
+        subsys: Subsystem,
         message_type: u8,
         attributes: Vec<DefaultNla>,
     },
 }
 
-impl From<NfLogMessage> for NetfilterMessageInner {
-    fn from(message: NfLogMessage) -> Self {
-        Self::NfLog(message)
+impl From<ULogMessage> for NetfilterMessageInner {
+    fn from(message: ULogMessage) -> Self {
+        Self::ULog(message)
     }
 }
 impl From<ConntrackMessage> for NetfilterMessageInner {
@@ -86,7 +118,7 @@ impl From<ConntrackMessage> for NetfilterMessageInner {
 impl Emitable for NetfilterMessageInner {
     fn buffer_len(&self) -> usize {
         match self {
-            NetfilterMessageInner::NfLog(message) => message.buffer_len(),
+            NetfilterMessageInner::ULog(message) => message.buffer_len(),
             NetfilterMessageInner::Conntrack(message) => message.buffer_len(),
             NetfilterMessageInner::Other { attributes, .. } => {
                 attributes.as_slice().buffer_len()
@@ -96,7 +128,7 @@ impl Emitable for NetfilterMessageInner {
 
     fn emit(&self, buffer: &mut [u8]) {
         match self {
-            NetfilterMessageInner::NfLog(message) => message.emit(buffer),
+            NetfilterMessageInner::ULog(message) => message.emit(buffer),
             NetfilterMessageInner::Conntrack(message) => message.emit(buffer),
             NetfilterMessageInner::Other { attributes, .. } => {
                 attributes.as_slice().emit(buffer)
@@ -123,19 +155,21 @@ impl NetfilterMessage {
         }
     }
 
-    pub fn subsys(&self) -> u8 {
+    pub fn subsys(&self) -> Subsystem {
         match self.inner {
-            NetfilterMessageInner::NfLog(_) => NfLogMessage::SUBSYS,
-            NetfilterMessageInner::Conntrack(_) => ConntrackMessage::SUBSYS,
+            NetfilterMessageInner::ULog(_) => Subsystem::ULog,
+            NetfilterMessageInner::Conntrack(_) => Subsystem::Conntrack,
             NetfilterMessageInner::Other { subsys, .. } => subsys,
         }
     }
 
-    pub fn message_type(&self) -> u8 {
+    fn message_type(&self) -> u8 {
         match self.inner {
-            NetfilterMessageInner::NfLog(ref message) => message.message_type(),
+            NetfilterMessageInner::ULog(ref message) => {
+                message.message_type().into()
+            }
             NetfilterMessageInner::Conntrack(ref message) => {
-                message.message_type()
+                message.message_type().into()
             }
             NetfilterMessageInner::Other { message_type, .. } => message_type,
         }
@@ -155,7 +189,7 @@ impl Emitable for NetfilterMessage {
 
 impl NetlinkSerializable for NetfilterMessage {
     fn message_type(&self) -> u16 {
-        ((self.subsys() as u16) << 8) | self.message_type() as u16
+        ((u8::from(self.subsys()) as u16) << 8) | self.message_type() as u16
     }
 
     fn buffer_len(&self) -> usize {

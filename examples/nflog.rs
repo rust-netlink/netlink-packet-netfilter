@@ -17,7 +17,7 @@ use netlink_packet_netfilter::{
             config::{ConfigCmd, ConfigFlags, ConfigMode, Timeout},
             packet::PacketNla,
         },
-        NfLogMessage,
+        ULogMessage,
     },
     NetfilterMessage, NetfilterMessageInner,
 };
@@ -25,7 +25,7 @@ use netlink_sys::{constants::NETLINK_NETFILTER, Socket};
 
 fn get_packet_nlas(message: &NetlinkMessage<NetfilterMessage>) -> &[PacketNla] {
     if let NetlinkPayload::InnerMessage(NetfilterMessage {
-        inner: NetfilterMessageInner::NfLog(NfLogMessage::Packet(nlas)),
+        inner: NetfilterMessageInner::ULog(ULogMessage::Packet(nlas)),
         ..
     }) = &message.payload
     {
