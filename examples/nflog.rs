@@ -6,11 +6,10 @@
 //   2) build the example: cargo build --example nflog
 //   3) run it as root: sudo ../target/debug/examples/nflog
 
-use std::{net::Ipv4Addr, time::Duration};
+use std::time::Duration;
 
 use netlink_packet_core::{parse_ip, NetlinkMessage, NetlinkPayload};
 use netlink_packet_netfilter::{
-    constants::*,
     nflog::{
         config_request,
         nlas::{
@@ -19,7 +18,7 @@ use netlink_packet_netfilter::{
         },
         ULogMessage,
     },
-    NetfilterMessage, NetfilterMessageInner,
+    NetfilterMessage, NetfilterMessageInner, ProtoFamily,
 };
 use netlink_sys::{constants::NETLINK_NETFILTER, Socket};
 
@@ -43,7 +42,8 @@ fn main() {
     socket.bind_auto().unwrap();
 
     // Then we issue the PfBind command
-    let packet = config_request(AF_INET, 0, vec![ConfigCmd::PfBind.into()]);
+    let packet =
+        config_request(ProtoFamily::IPv4, 0, vec![ConfigCmd::PfBind.into()]);
     let mut buf = vec![0; packet.header.length as usize];
     packet.serialize(&mut buf[..]);
     println!(">>> {:?}", packet);
@@ -64,7 +64,7 @@ fn main() {
     // also set various parameters at the same time
     let timeout: Timeout = Duration::from_millis(100).into();
     let packet = config_request(
-        AF_INET,
+        ProtoFamily::IPv4,
         1,
         vec![
             ConfigCmd::Bind.into(),

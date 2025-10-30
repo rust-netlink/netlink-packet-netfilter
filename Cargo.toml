@@ -13,7 +13,7 @@ description = "netlink packet types for the netfilter subprotocol"
 
 [dependencies]
 netlink-packet-core = { version = "0.8.1" }
-bitflags = "2.3"
+bitflags = "2.10.0"
 libc = "0.2.77"
 derive_more = "0.99.16"
 

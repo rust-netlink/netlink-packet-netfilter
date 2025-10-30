@@ -10,6 +10,62 @@ use crate::{
     buffer::NetfilterBuffer, conntrack::ConntrackMessage, nflog::ULogMessage,
 };
 
+// ProtoFamily represents a protocol family in the Netfilter header (nfgenmsg).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ProtoFamily {
+    Unspec,
+    Inet,
+    IPv4,
+    ARP,
+    NetDev,
+    Bridge,
+    IPv6,
+    DECNet,
+    Other(u8),
+}
+
+const NFPROTO_UNSPEC: u8 = 0;
+const NFPROTO_INET: u8 = 1;
+const NFPROTO_IPV4: u8 = 2;
+const NFPROTO_ARP: u8 = 3;
+const NFPROTO_NETDEV: u8 = 5;
+const NFPROTO_BRIDGE: u8 = 7;
+const NFPROTO_IPV6: u8 = 10;
+const NFPROTO_DECNET: u8 = 12;
+
+impl From<ProtoFamily> for u8 {
+    fn from(proto_family: ProtoFamily) -> Self {
+        match proto_family {
+            ProtoFamily::Unspec => NFPROTO_UNSPEC,
+            ProtoFamily::Inet => NFPROTO_INET,
+            ProtoFamily::IPv4 => NFPROTO_IPV4,
+            ProtoFamily::ARP => NFPROTO_ARP,
+            ProtoFamily::NetDev => NFPROTO_NETDEV,
+            ProtoFamily::Bridge => NFPROTO_BRIDGE,
+            ProtoFamily::IPv6 => NFPROTO_IPV6,
+            ProtoFamily::DECNet => NFPROTO_DECNET,
+            ProtoFamily::Other(p) => p,
+        }
+    }
+}
+
+impl From<u8> for ProtoFamily {
+    fn from(proto_family_num: u8) -> Self {
+        match proto_family_num {
+            NFPROTO_UNSPEC => ProtoFamily::Unspec,
+            NFPROTO_INET => ProtoFamily::Inet,
+            NFPROTO_IPV4 => ProtoFamily::IPv4,
+            NFPROTO_ARP => ProtoFamily::ARP,
+            NFPROTO_NETDEV => ProtoFamily::NetDev,
+            NFPROTO_BRIDGE => ProtoFamily::Bridge,
+            NFPROTO_IPV6 => ProtoFamily::IPv6,
+            NFPROTO_DECNET => ProtoFamily::DECNet,
+            _ => ProtoFamily::Other(proto_family_num),
+        }
+    }
+}
+
 pub(crate) const NETFILTER_HEADER_LEN: usize = 4;
 
 buffer!(NetfilterHeaderBuffer(NETFILTER_HEADER_LEN) {
@@ -21,13 +77,13 @@ buffer!(NetfilterHeaderBuffer(NETFILTER_HEADER_LEN) {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct NetfilterHeader {
-    pub family: u8,
+    pub family: ProtoFamily,
     pub version: u8,
     pub res_id: u16,
 }
 
 impl NetfilterHeader {
-    pub fn new(family: u8, version: u8, res_id: u16) -> Self {
+    pub fn new(family: ProtoFamily, version: u8, res_id: u16) -> Self {
         Self {
             family,
             version,
@@ -43,7 +99,7 @@ impl Emitable for NetfilterHeader {
 
     fn emit(&self, buf: &mut [u8]) {
         let mut buf = NetfilterHeaderBuffer::new(buf);
-        buf.set_family(self.family);
+        buf.set_family(self.family.into());
         buf.set_version(self.version);
         buf.set_res_id(self.res_id.to_be());
     }
@@ -53,7 +109,7 @@ impl<T: AsRef<[u8]>> Parseable<NetfilterHeaderBuffer<T>> for NetfilterHeader {
     fn parse(buf: &NetfilterHeaderBuffer<T>) -> Result<Self, DecodeError> {
         buf.check_buffer_length()?;
         Ok(NetfilterHeader {
-            family: buf.family(),
+            family: buf.family().into(),
             version: buf.version(),
             res_id: u16::from_be(buf.res_id()),
         })
