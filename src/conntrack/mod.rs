@@ -5,5 +5,5 @@ pub use message::{ConntrackMessage, ConntrackMessageType};
 mod attributes;
 pub use attributes::{
     ConntrackAttribute, IPTuple, ProtoInfo, ProtoInfoTCP, ProtoTuple, Protocol,
-    TCPFlags, Tuple,
+    Status, TCPFlags, Tuple,
 };

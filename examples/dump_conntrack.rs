@@ -4,8 +4,7 @@ use netlink_packet_core::{
     NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_DUMP, NLM_F_REQUEST,
 };
 use netlink_packet_netfilter::{
-    conntrack::ConntrackMessage, constants::AF_INET, NetfilterHeader,
-    NetfilterMessage,
+    conntrack::ConntrackMessage, NetfilterHeader, NetfilterMessage, ProtoFamily,
 };
 use netlink_sys::{protocols::NETLINK_NETFILTER, Socket, SocketAddr};
 
@@ -19,7 +18,7 @@ fn main() {
     let mut packet = NetlinkMessage::new(
         nl_hdr,
         NetlinkPayload::from(NetfilterMessage::new(
-            NetfilterHeader::new(AF_INET, 0, 0),
+            NetfilterHeader::new(ProtoFamily::IPv4, 0, 0),
             ConntrackMessage::Get(vec![]),
         )),
     );

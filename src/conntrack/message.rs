@@ -11,6 +11,7 @@ use netlink_packet_core::{
 #[non_exhaustive]
 pub enum ConntrackMessage {
     Get(Vec<ConntrackAttribute>),
+    Delete(Vec<ConntrackAttribute>),
     Other {
         message_type: u8,
         attributes: Vec<DefaultNla>,
@@ -18,11 +19,13 @@ pub enum ConntrackMessage {
 }
 
 const IPCTNL_MSG_CT_GET: u8 = 1;
+const IPCTNL_MSG_CT_DELETE: u8 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ConntrackMessageType {
     Get,
+    Delete,
     Other(u8),
 }
 
@@ -30,6 +33,7 @@ impl From<u8> for ConntrackMessageType {
     fn from(value: u8) -> Self {
         match value {
             IPCTNL_MSG_CT_GET => Self::Get,
+            IPCTNL_MSG_CT_DELETE => Self::Delete,
             v => Self::Other(v),
         }
     }
@@ -39,6 +43,7 @@ impl From<ConntrackMessageType> for u8 {
     fn from(value: ConntrackMessageType) -> Self {
         match value {
             ConntrackMessageType::Get => IPCTNL_MSG_CT_GET,
+            ConntrackMessageType::Delete => IPCTNL_MSG_CT_DELETE,
             ConntrackMessageType::Other(v) => v,
         }
     }
@@ -48,6 +53,7 @@ impl ConntrackMessage {
     pub fn message_type(&self) -> ConntrackMessageType {
         match self {
             ConntrackMessage::Get(_) => ConntrackMessageType::Get,
+            ConntrackMessage::Delete(_) => ConntrackMessageType::Delete,
             ConntrackMessage::Other { message_type, .. } => {
                 (*message_type).into()
             }
@@ -61,6 +67,9 @@ impl Emitable for ConntrackMessage {
             ConntrackMessage::Get(attributes) => {
                 attributes.as_slice().buffer_len()
             }
+            ConntrackMessage::Delete(attributes) => {
+                attributes.as_slice().buffer_len()
+            }
             ConntrackMessage::Other { attributes, .. } => {
                 attributes.as_slice().buffer_len()
             }
@@ -70,6 +79,9 @@ impl Emitable for ConntrackMessage {
     fn emit(&self, buffer: &mut [u8]) {
         match self {
             ConntrackMessage::Get(attributes) => {
+                attributes.as_slice().emit(buffer)
+            }
+            ConntrackMessage::Delete(attributes) => {
                 attributes.as_slice().emit(buffer)
             }
             ConntrackMessage::Other { attributes, .. } => {
@@ -92,6 +104,12 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
                     ConntrackAttribute::parse(&nla_buf)
                 })?;
                 ConntrackMessage::Get(attributes)
+            }
+            ConntrackMessageType::Delete => {
+                let nlas = buf.parse_all_nlas(|nla_buf| {
+                    ConntrackAttribute::parse(&nla_buf)
+                })?;
+                ConntrackMessage::Delete(nlas)
             }
             ConntrackMessageType::Other(message_type) => {
                 ConntrackMessage::Other {

@@ -4,7 +4,8 @@ pub(crate) mod buffer;
 pub mod constants;
 mod message;
 pub use message::{
-    NetfilterHeader, NetfilterMessage, NetfilterMessageInner, Subsystem,
+    NetfilterHeader, NetfilterMessage, NetfilterMessageInner, ProtoFamily,
+    Subsystem,
 };
 pub mod conntrack;
 pub mod nflog;

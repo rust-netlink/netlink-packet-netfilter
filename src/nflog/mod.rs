@@ -9,12 +9,12 @@ use netlink_packet_core::{
 };
 
 use crate::{
-    constants::NFNETLINK_V0, nflog::nlas::config::ConfigNla, NetfilterHeader,
-    NetfilterMessage,
+    constants::NFNETLINK_V0, message::ProtoFamily,
+    nflog::nlas::config::ConfigNla, NetfilterHeader, NetfilterMessage,
 };
 
 pub fn config_request(
-    family: u8,
+    family: ProtoFamily,
     group_num: u16,
     nlas: Vec<ConfigNla>,
 ) -> NetlinkMessage<NetfilterMessage> {
