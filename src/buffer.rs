@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
+    ctnetlink::CtNetlinkMessage,
     message::{
         NetfilterHeader, NetfilterMessage, NetfilterMessageInner,
         NETFILTER_HEADER_LEN,
@@ -56,6 +57,10 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
             NfLogMessage::SUBSYS => NetfilterMessageInner::NfLog(
                 NfLogMessage::parse_with_param(buf, message_type)
                     .context("failed to parse nflog payload")?,
+            ),
+            CtNetlinkMessage::SUBSYS => NetfilterMessageInner::CtNetlink(
+                CtNetlinkMessage::parse_with_param(buf, message_type)
+                    .context("failed to parse ctnetlink payload")?,
             ),
             _ => NetfilterMessageInner::Other {
                 subsys,
