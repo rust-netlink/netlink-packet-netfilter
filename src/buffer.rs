@@ -6,6 +6,7 @@ use crate::{
         NETFILTER_HEADER_LEN,
     },
     nflog::NfLogMessage,
+    nfqueue::NfQueueMessage,
 };
 use netlink_packet_core::{
     buffer, fields, DecodeError, DefaultNla, ErrorContext, NlaBuffer,
@@ -55,6 +56,10 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
         let inner = match subsys {
             NfLogMessage::SUBSYS => NetfilterMessageInner::NfLog(
                 NfLogMessage::parse_with_param(buf, message_type)
+                    .context("failed to parse nflog payload")?,
+            ),
+            NfQueueMessage::SUBSYS => NetfilterMessageInner::NfQueue(
+                NfQueueMessage::parse_with_param(buf, message_type)
                     .context("failed to parse nflog payload")?,
             ),
             _ => NetfilterMessageInner::Other {

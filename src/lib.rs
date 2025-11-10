@@ -5,3 +5,4 @@ pub mod constants;
 mod message;
 pub use message::{NetfilterHeader, NetfilterMessage, NetfilterMessageInner};
 pub mod nflog;
+pub mod nfqueue;
