@@ -375,3 +375,99 @@ fn test_delete_conntrack_udp_ipv6() {
         expected
     );
 }
+
+// wireshark capture of nlmon against command (netlink message header removed):
+//  conntrack -I -p tcp --src 192.168.1.100 --dst 10.0.0.1 --sport 12345 --dport
+// 80 --state SYN_SENT --timeout 60
+#[test]
+fn test_new_conntrack() {
+    let raw: Vec<u8> = vec![
+        0x02, 0x00, 0x00, 0x00, 0x34, 0x00, 0x01, 0x80, 0x14, 0x00, 0x01, 0x80,
+        0x08, 0x00, 0x01, 0x00, 0xc0, 0xa8, 0x01, 0x64, 0x08, 0x00, 0x02, 0x00,
+        0x0a, 0x00, 0x00, 0x01, 0x1c, 0x00, 0x02, 0x80, 0x05, 0x00, 0x01, 0x00,
+        0x06, 0x00, 0x00, 0x00, 0x06, 0x00, 0x02, 0x00, 0x30, 0x39, 0x00, 0x00,
+        0x06, 0x00, 0x03, 0x00, 0x00, 0x50, 0x00, 0x00, 0x34, 0x00, 0x02, 0x80,
+        0x14, 0x00, 0x01, 0x80, 0x08, 0x00, 0x01, 0x00, 0x0a, 0x00, 0x00, 0x01,
+        0x08, 0x00, 0x02, 0x00, 0xc0, 0xa8, 0x01, 0x64, 0x1c, 0x00, 0x02, 0x80,
+        0x05, 0x00, 0x01, 0x00, 0x06, 0x00, 0x00, 0x00, 0x06, 0x00, 0x02, 0x00,
+        0x00, 0x50, 0x00, 0x00, 0x06, 0x00, 0x03, 0x00, 0x30, 0x39, 0x00, 0x00,
+        0x08, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x3c, 0x20, 0x00, 0x04, 0x80,
+        0x1c, 0x00, 0x01, 0x80, 0x05, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x06, 0x00, 0x04, 0x00, 0x0a, 0x0a, 0x00, 0x00, 0x06, 0x00, 0x05, 0x00,
+        0x0a, 0x0a, 0x00, 0x00,
+    ];
+
+    let orig_src_addr =
+        IPTuple::SourceAddress(IpAddr::V4("192.168.1.100".parse().unwrap()));
+    let orig_dst_addr =
+        IPTuple::DestinationAddress(IpAddr::V4("10.0.0.1".parse().unwrap()));
+
+    let orig_proto_num = ProtoTuple::Protocol(Protocol::Tcp);
+    let orig_src_port = ProtoTuple::SourcePort(12345);
+    let orig_dst_port = ProtoTuple::DestinationPort(80);
+
+    let orig_ip_tuple = Tuple::Ip(vec![orig_src_addr, orig_dst_addr]);
+    let orig_proto_tuple =
+        Tuple::Proto(vec![orig_proto_num, orig_src_port, orig_dst_port]);
+
+    let reply_src_addr =
+        IPTuple::SourceAddress(IpAddr::V4("10.0.0.1".parse().unwrap()));
+    let reply_dst_addr = IPTuple::DestinationAddress(IpAddr::V4(
+        "192.168.1.100".parse().unwrap(),
+    ));
+
+    let reply_proto_num = ProtoTuple::Protocol(Protocol::Tcp);
+    let reply_src_port = ProtoTuple::SourcePort(80);
+    let reply_dst_port = ProtoTuple::DestinationPort(12345);
+
+    let reply_ip_tuple = Tuple::Ip(vec![reply_src_addr, reply_dst_addr]);
+    let reply_proto_tuple =
+        Tuple::Proto(vec![reply_proto_num, reply_src_port, reply_dst_port]);
+
+    let timeout = 60;
+
+    let proto_info = ProtoInfo::TCP(vec![
+        ProtoInfoTCP::State(1),
+        ProtoInfoTCP::OriginalFlags(TCPFlags {
+            flags: 10,
+            mask: 10,
+        }),
+        ProtoInfoTCP::ReplyFlags(TCPFlags {
+            flags: 10,
+            mask: 10,
+        }),
+    ]);
+
+    let attributes = vec![
+        ConntrackAttribute::CtaTupleOrig(vec![orig_ip_tuple, orig_proto_tuple]),
+        ConntrackAttribute::CtaTupleReply(vec![
+            reply_ip_tuple,
+            reply_proto_tuple,
+        ]),
+        ConntrackAttribute::CtaTimeout(timeout),
+        ConntrackAttribute::CtaProtoInfo(vec![proto_info]),
+    ];
+
+    let expected: NetfilterMessage = NetfilterMessage::new(
+        NetfilterHeader::new(ProtoFamily::IPv4, 0, 0),
+        ConntrackMessage::New(attributes),
+    );
+
+    let mut buffer = vec![0; expected.buffer_len()];
+    expected.emit(&mut buffer);
+
+    // Check if the serialization was correct
+    assert_eq!(buffer, raw);
+
+    let message_type = ((u8::from(Subsystem::Conntrack) as u16) << 8)
+        | (u8::from(ConntrackMessageType::New) as u16);
+    // Check if the deserialization was correct
+    assert_eq!(
+        NetfilterMessage::parse_with_param(
+            &NetfilterBuffer::new(&raw),
+            message_type
+        )
+        .unwrap(),
+        expected
+    );
+}
