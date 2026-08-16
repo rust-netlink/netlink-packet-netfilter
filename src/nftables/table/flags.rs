@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 use bitflags::bitflags;
 
 const NFT_TABLE_F_DORMANT: u32 = 0x1;

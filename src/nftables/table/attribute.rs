@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    emit_u32_be, emit_u64_be, parse_string, parse_u32_be, parse_u64_be, DecodeError,
-    DefaultNla, ErrorContext as _, Nla, NlaBuffer, Parseable,
+    emit_u32_be, emit_u64_be, parse_string, parse_u32_be, parse_u64_be,
+    DecodeError, DefaultNla, ErrorContext as _, Nla, NlaBuffer, Parseable,
 };
 
 use crate::nftables::table::TableFlags;
@@ -90,10 +90,12 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
                     .context("invalid NFTA_TABLE_NAME value")?,
             ),
             NFTA_TABLE_FLAGS => Self::Flags(TableFlags::from_bits_retain(
-                parse_u32_be(payload).context("invalid NFTA_TABLE_FLAGS value")?,
+                parse_u32_be(payload)
+                    .context("invalid NFTA_TABLE_FLAGS value")?,
             )),
             NFTA_TABLE_USE => Self::Use(
-                parse_u32_be(payload).context("invalid NFTA_TABLE_USE value")?,
+                parse_u32_be(payload)
+                    .context("invalid NFTA_TABLE_USE value")?,
             ),
             NFTA_TABLE_HANDLE => Self::Handle(
                 parse_u64_be(payload)
@@ -101,7 +103,8 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
             ),
             NFTA_TABLE_USERDATA => Self::UserData(payload.to_vec()),
             NFTA_TABLE_OWNER => Self::Owner(
-                parse_u32_be(payload).context("invalid NFTA_TABLE_OWNER value")?,
+                parse_u32_be(payload)
+                    .context("invalid NFTA_TABLE_OWNER value")?,
             ),
             _ => Self::Other(DefaultNla::parse(buf)?),
         })

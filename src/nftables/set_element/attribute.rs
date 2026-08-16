@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    emit_u32_be, emit_u64_be, parse_string, parse_u32_be, parse_u64_be, DecodeError,
-    DefaultNla, Emitable, ErrorContext as _, Nla, NlaBuffer, NlasIterator,
-    Parseable, ParseableParametrized as _, NLA_F_NESTED,
+    emit_u32_be, emit_u64_be, parse_string, parse_u32_be, parse_u64_be,
+    DecodeError, DefaultNla, Emitable, ErrorContext as _, Nla, NlaBuffer,
+    NlasIterator, Parseable, ParseableParametrized as _, NLA_F_NESTED,
 };
 
 use crate::nftables::{
@@ -154,7 +154,8 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
             NFTA_SET_ELEM_EXPR => Self::Expression(
                 ExpressionAttribute::parse_with_param(
                     &NlaBuffer::new(payload),
-                    None, // FIXME: Figure out how the legacy behavior determined the name
+                    None, /* FIXME: Figure out how the legacy behavior
+                           * determined the name */
                 )
                 .context("invalid NFTA_SET_ELEM_EXPR value")?,
             ),
