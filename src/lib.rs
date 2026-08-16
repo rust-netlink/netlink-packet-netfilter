@@ -11,5 +11,6 @@ pub mod conntrack;
 pub mod nflog;
 pub mod nftables;
 pub mod none;
-#[cfg(test)]
+// test data are using hard coded little endian byte order, not for big-endian
+#[cfg(all(test, not(target_endian = "big")))]
 mod tests;

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 mod message;
-#[cfg(test)]
+// test data are using hard coded little endian byte order, not for big-endian
+#[cfg(all(test, not(target_endian = "big")))]
 mod tests;
 
 pub mod attributes;
