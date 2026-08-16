@@ -11,10 +11,7 @@ use crate::{
         NFULA_CFG_CMD, NFULA_CFG_FLAGS, NFULA_CFG_MODE, NFULA_CFG_NLBUFSIZ,
         NFULA_CFG_QTHRESH, NFULA_CFG_TIMEOUT,
     },
-    nflog::nlas::config::{
-        config_mode::ConfigModeBuffer, ConfigCmd, ConfigFlags, ConfigMode,
-        Timeout,
-    },
+    nflog::nlas::config::{ConfigCmd, ConfigFlags, ConfigMode, Timeout},
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, From, IsVariant)]
@@ -83,10 +80,9 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
                 parse_u8(payload).context("invalid NFULA_CFG_CMD value")?,
             )
             .into(),
-            NFULA_CFG_MODE => {
-                let buf = ConfigModeBuffer::new_checked(payload)?;
-                ConfigMode::parse(&buf)?.into()
-            }
+            NFULA_CFG_MODE => ConfigMode::parse(payload)
+                .context("invalid NFULA_CFG_MODE value")?
+                .into(),
             NFULA_CFG_NLBUFSIZ => ConfigNla::NlBufSiz(
                 parse_u32_be(payload)
                     .context("invalid NFULA_CFG_NLBUFSIZ value")?,

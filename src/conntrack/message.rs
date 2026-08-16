@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-use crate::{
-    buffer::NetfilterBuffer, conntrack::attributes::ConntrackAttribute,
-};
+use crate::conntrack::attributes::ConntrackAttribute;
+use crate::nlas::{default_nlas, parse_all_nlas};
 use netlink_packet_core::{
     DecodeError, DefaultNla, Emitable, Parseable, ParseableParametrized,
 };
@@ -103,28 +102,26 @@ impl Emitable for ConntrackMessage {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized>
-    ParseableParametrized<NetfilterBuffer<&'a T>, u8> for ConntrackMessage
-{
+impl ParseableParametrized<[u8], u8> for ConntrackMessage {
     fn parse_with_param(
-        buf: &NetfilterBuffer<&'a T>,
+        buf: &[u8],
         message_type: u8,
     ) -> Result<Self, DecodeError> {
         Ok(match ConntrackMessageType::from(message_type) {
             ConntrackMessageType::New => {
-                let attributes = buf.parse_all_nlas(|nla_buf| {
+                let attributes = parse_all_nlas(buf, |nla_buf| {
                     ConntrackAttribute::parse(&nla_buf)
                 })?;
                 ConntrackMessage::New(attributes)
             }
             ConntrackMessageType::Get => {
-                let attributes = buf.parse_all_nlas(|nla_buf| {
+                let attributes = parse_all_nlas(buf, |nla_buf| {
                     ConntrackAttribute::parse(&nla_buf)
                 })?;
                 ConntrackMessage::Get(attributes)
             }
             ConntrackMessageType::Delete => {
-                let nlas = buf.parse_all_nlas(|nla_buf| {
+                let nlas = parse_all_nlas(buf, |nla_buf| {
                     ConntrackAttribute::parse(&nla_buf)
                 })?;
                 ConntrackMessage::Delete(nlas)
@@ -132,7 +129,7 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
             ConntrackMessageType::Other(message_type) => {
                 ConntrackMessage::Other {
                     message_type,
-                    attributes: buf.default_nlas()?,
+                    attributes: default_nlas(buf)?,
                 }
             }
         })

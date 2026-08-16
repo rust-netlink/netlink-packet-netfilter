@@ -5,7 +5,7 @@ use netlink_packet_core::{
     Parseable,
 };
 
-use crate::conntrack::attributes::tcp_flags::{TCPFlags, TCPFlagsBuffer};
+use crate::conntrack::attributes::tcp_flags::TCPFlags;
 
 const CTA_PROTOINFO_TCP_STATE: u16 = 1;
 const CTA_PROTOINFO_TCP_WSCALE_ORIGINAL: u16 = 2;
@@ -79,13 +79,13 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
                 parse_u8(payload)
                     .context("invalid CTA_PROTOINFO_TCP_WSCALE_REPLY value")?,
             ),
-            CTA_PROTOINFO_TCP_FLAGS_ORIGINAL => ProtoInfoTCP::OriginalFlags(
-                TCPFlags::parse(&TCPFlagsBuffer::new(payload)).context(
+            CTA_PROTOINFO_TCP_FLAGS_ORIGINAL => {
+                ProtoInfoTCP::OriginalFlags(TCPFlags::parse(payload).context(
                     "invalid CTA_PROTOINFO_TCP_FLAGS_ORIGINAL value",
-                )?,
-            ),
+                )?)
+            }
             CTA_PROTOINFO_TCP_FLAGS_REPLY => ProtoInfoTCP::ReplyFlags(
-                TCPFlags::parse(&TCPFlagsBuffer::new(payload))
+                TCPFlags::parse(payload)
                     .context("invalid CTA_PROTOINFO_TCP_FLAGS_REPLY value")?,
             ),
             _ => ProtoInfoTCP::Other(DefaultNla::parse(buf)?),

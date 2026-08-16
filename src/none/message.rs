@@ -4,7 +4,7 @@ use netlink_packet_core::{
     DecodeError, DefaultNla, Emitable, ErrorContext as _, ParseableParametrized,
 };
 
-use crate::buffer::NetfilterBuffer;
+use crate::nlas::default_nlas;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[non_exhaustive]
@@ -79,20 +79,17 @@ impl Emitable for ControlMessage {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized>
-    ParseableParametrized<NetfilterBuffer<&'a T>, u8> for ControlMessage
-{
+impl ParseableParametrized<[u8], u8> for ControlMessage {
     fn parse_with_param(
-        buf: &NetfilterBuffer<&'a T>,
+        buf: &[u8],
         message_type: u8,
     ) -> Result<Self, DecodeError> {
         Ok(match ControlMessageType::from(message_type) {
             ControlMessageType::BatchBegin => Self::BatchBegin,
             ControlMessageType::BatchEnd => Self::BatchEnd,
             ControlMessageType::Other(_) => {
-                let attributes = buf
-                    .default_nlas()
-                    .context("failed to parse message nla")?;
+                let attributes =
+                    default_nlas(buf).context("failed to parse message nla")?;
                 Self::Other {
                     message_type,
                     attributes,

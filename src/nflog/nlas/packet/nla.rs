@@ -16,9 +16,7 @@ use crate::{
         NFULA_PREFIX, NFULA_SEQ, NFULA_SEQ_GLOBAL, NFULA_TIMESTAMP, NFULA_UID,
     },
     nflog::nlas::packet::{
-        hw_addr::{HwAddr, HwAddrBuffer},
-        packet_hdr::{PacketHdr, PacketHdrBuffer},
-        timestamp::{TimeStamp, TimeStampBuffer},
+        hw_addr::HwAddr, packet_hdr::PacketHdr, timestamp::TimeStamp,
     },
 };
 
@@ -150,20 +148,17 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
         let kind = buf.kind();
         let payload = buf.value();
         let nla = match kind {
-            NFULA_PACKET_HDR => {
-                let buf = PacketHdrBuffer::new_checked(payload)
-                    .context("invalid NFULA_PACKET_HDR value")?;
-                PacketHdr::parse(&buf)?.into()
-            }
+            NFULA_PACKET_HDR => PacketHdr::parse(payload)
+                .context("invalid NFULA_PACKET_HDR value")?
+                .into(),
 
             NFULA_MARK => PacketNla::Mark(
                 parse_u32_be(payload).context("invalid NFULA_MARK value")?,
             ),
-            NFULA_TIMESTAMP => {
-                let buf = TimeStampBuffer::new_checked(&payload)
-                    .context("invalid NFULA_TIMESTAMP value")?;
-                PacketNla::Timestamp(TimeStamp::parse(&buf)?)
-            }
+            NFULA_TIMESTAMP => PacketNla::Timestamp(
+                TimeStamp::parse(payload)
+                    .context("invalid NFULA_TIMESTAMP value")?,
+            ),
             NFULA_IFINDEX_INDEV => PacketNla::IfIndexInDev(
                 parse_u32_be(payload)
                     .context("invalid NFULA_IFINDEX_INDEV value")?,
@@ -180,11 +175,9 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
                 parse_u32_be(payload)
                     .context("invalid NFULA_IFINDEX_PHYSOUTDEV value")?,
             ),
-            NFULA_HWADDR => {
-                let buf = HwAddrBuffer::new_checked(payload)
-                    .context("invalid NFULA_HWADDR value")?;
-                PacketNla::HwAddr(HwAddr::parse(&buf)?)
-            }
+            NFULA_HWADDR => PacketNla::HwAddr(
+                HwAddr::parse(payload).context("invalid NFULA_HWADDR value")?,
+            ),
             NFULA_PAYLOAD => PacketNla::Payload(payload.to_vec()),
             NFULA_PREFIX => PacketNla::Prefix(
                 CStr::from_bytes_with_nul(payload)

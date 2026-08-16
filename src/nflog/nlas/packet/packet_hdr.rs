@@ -1,17 +1,29 @@
 // SPDX-License-Identifier: MIT
 
-use netlink_packet_core::{
-    buffer, fields, getter, setter, DecodeError, Nla, Parseable,
-};
+use std::mem::size_of;
 
-const PACKET_HDR_LEN: usize = 4;
+use netlink_packet_core::{DecodeError, Nla};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
+
 pub const NFULA_PACKET_HDR: u16 = libc::NFULA_PACKET_HDR as u16;
 
-buffer!(PacketHdrBuffer(PACKET_HDR_LEN) {
-    hw_protocol: (u16, 0..2),
-    hook: (u8, 2),
-    pad: (u8, 3),
-});
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    Clone,
+    FromBytes,
+    IntoBytes,
+    KnownLayout,
+    Immutable,
+    Unaligned,
+)]
+#[repr(C, packed)]
+pub struct PacketHdrBuffer {
+    hw_protocol: u16,
+    hook: u8,
+    pad: u8,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PacketHdr {
@@ -19,9 +31,35 @@ pub struct PacketHdr {
     hook: u8,
 }
 
+impl PacketHdr {
+    pub fn parse(payload: &[u8]) -> Result<Self, DecodeError> {
+        let (raw, _) =
+            PacketHdrBuffer::ref_from_prefix(payload).map_err(|_| {
+                DecodeError::buffer_too_small(
+                    payload.len(),
+                    size_of::<PacketHdrBuffer>(),
+                )
+            })?;
+        Ok(Self {
+            hw_protocol: u16::from_be(raw.hw_protocol),
+            hook: raw.hook,
+        })
+    }
+}
+
+impl From<&PacketHdr> for PacketHdrBuffer {
+    fn from(value: &PacketHdr) -> Self {
+        Self {
+            hw_protocol: value.hw_protocol.to_be(),
+            hook: value.hook,
+            pad: 0,
+        }
+    }
+}
+
 impl Nla for PacketHdr {
     fn value_len(&self) -> usize {
-        PACKET_HDR_LEN
+        size_of::<PacketHdrBuffer>()
     }
 
     fn kind(&self) -> u16 {
@@ -29,17 +67,7 @@ impl Nla for PacketHdr {
     }
 
     fn emit_value(&self, buf: &mut [u8]) {
-        let mut buf = PacketHdrBuffer::new(buf);
-        buf.set_hw_protocol(self.hw_protocol.to_be());
-        buf.set_hook(self.hook)
-    }
-}
-
-impl<T: AsRef<[u8]>> Parseable<PacketHdrBuffer<T>> for PacketHdr {
-    fn parse(buf: &PacketHdrBuffer<T>) -> Result<Self, DecodeError> {
-        Ok(PacketHdr {
-            hw_protocol: u16::from_be(buf.hw_protocol()),
-            hook: buf.hook(),
-        })
+        let raw = PacketHdrBuffer::from(self);
+        buf.copy_from_slice(raw.as_bytes());
     }
 }

@@ -4,10 +4,8 @@ use netlink_packet_core::{
     DecodeError, DefaultNla, Emitable, Parseable, ParseableParametrized,
 };
 
-use crate::{
-    buffer::NetfilterBuffer,
-    nflog::nlas::{config::ConfigNla, packet::PacketNla},
-};
+use crate::nflog::nlas::{config::ConfigNla, packet::PacketNla};
+use crate::nlas::parse_all_nlas;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ULogMessage {
@@ -78,27 +76,25 @@ impl Emitable for ULogMessage {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized>
-    ParseableParametrized<NetfilterBuffer<&'a T>, u8> for ULogMessage
-{
+impl ParseableParametrized<[u8], u8> for ULogMessage {
     fn parse_with_param(
-        buf: &NetfilterBuffer<&'a T>,
+        buf: &[u8],
         message_type: u8,
     ) -> Result<Self, DecodeError> {
         Ok(match ULogMessageType::from(message_type) {
             ULogMessageType::Config => {
                 let nlas =
-                    buf.parse_all_nlas(|nla_buf| ConfigNla::parse(&nla_buf))?;
+                    parse_all_nlas(buf, |nla_buf| ConfigNla::parse(&nla_buf))?;
                 ULogMessage::Config(nlas)
             }
             ULogMessageType::Packet => {
                 let nlas =
-                    buf.parse_all_nlas(|nla_buf| PacketNla::parse(&nla_buf))?;
+                    parse_all_nlas(buf, |nla_buf| PacketNla::parse(&nla_buf))?;
                 ULogMessage::Packet(nlas)
             }
             ULogMessageType::Other(message_type) => ULogMessage::Other {
                 message_type,
-                nlas: buf.default_nlas()?,
+                nlas: crate::nlas::default_nlas(buf)?,
             },
         })
     }

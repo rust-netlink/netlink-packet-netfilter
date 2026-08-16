@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    buffer, fields, getter, setter, DecodeError, DefaultNla, Emitable,
-    NetlinkDeserializable, NetlinkHeader, NetlinkPayload, NetlinkSerializable,
-    Parseable, ParseableParametrized,
+    DecodeError, DefaultNla, Emitable, ErrorContext, NetlinkDeserializable,
+    NetlinkHeader, NetlinkPayload, NetlinkSerializable, ParseableParametrized,
 };
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
 use crate::{
-    buffer::NetfilterBuffer, conntrack::ConntrackMessage, nflog::ULogMessage,
-    nftables::NfTablesMessage, none::ControlMessage,
+    conntrack::ConntrackMessage, nflog::ULogMessage, nftables::NfTablesMessage,
+    none::ControlMessage,
 };
 
 // ProtoFamily represents a protocol family in the Netfilter header (nfgenmsg).
@@ -69,11 +69,23 @@ impl From<u8> for ProtoFamily {
 
 pub(crate) const NETFILTER_HEADER_LEN: usize = 4;
 
-buffer!(NetfilterHeaderBuffer(NETFILTER_HEADER_LEN) {
-    family: (u8, 0),
-    version: (u8, 1),
-    res_id: (u16, 2..4),
-});
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    Clone,
+    FromBytes,
+    IntoBytes,
+    KnownLayout,
+    Immutable,
+    Unaligned,
+)]
+#[repr(C, packed)]
+pub struct NetfilterHeaderBuffer {
+    family: u8,
+    version: u8,
+    res_id: u16,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
@@ -91,6 +103,31 @@ impl NetfilterHeader {
             res_id,
         }
     }
+
+    pub fn parse(payload: &[u8]) -> Result<Self, DecodeError> {
+        let (raw, _) = NetfilterHeaderBuffer::ref_from_prefix(payload)
+            .map_err(|_| {
+                DecodeError::buffer_too_small(
+                    payload.len(),
+                    NETFILTER_HEADER_LEN,
+                )
+            })?;
+        Ok(Self {
+            family: raw.family.into(),
+            version: raw.version,
+            res_id: u16::from_be(raw.res_id),
+        })
+    }
+}
+
+impl From<&NetfilterHeader> for NetfilterHeaderBuffer {
+    fn from(header: &NetfilterHeader) -> Self {
+        Self {
+            family: header.family.into(),
+            version: header.version,
+            res_id: header.res_id.to_be(),
+        }
+    }
 }
 
 impl Emitable for NetfilterHeader {
@@ -99,21 +136,8 @@ impl Emitable for NetfilterHeader {
     }
 
     fn emit(&self, buf: &mut [u8]) {
-        let mut buf = NetfilterHeaderBuffer::new(buf);
-        buf.set_family(self.family.into());
-        buf.set_version(self.version);
-        buf.set_res_id(self.res_id.to_be());
-    }
-}
-
-impl<T: AsRef<[u8]>> Parseable<NetfilterHeaderBuffer<T>> for NetfilterHeader {
-    fn parse(buf: &NetfilterHeaderBuffer<T>) -> Result<Self, DecodeError> {
-        buf.check_buffer_length()?;
-        Ok(NetfilterHeader {
-            family: buf.family().into(),
-            version: buf.version(),
-            res_id: u16::from_be(buf.res_id()),
-        })
+        let raw = NetfilterHeaderBuffer::from(self);
+        buf[..NETFILTER_HEADER_LEN].copy_from_slice(raw.as_bytes());
     }
 }
 
@@ -267,6 +291,56 @@ impl NetfilterMessage {
     }
 }
 
+impl ParseableParametrized<[u8], u16> for NetfilterMessage {
+    fn parse_with_param(
+        buf: &[u8],
+        message_type: u16,
+    ) -> Result<Self, DecodeError> {
+        let header = NetfilterHeader::parse(buf)
+            .context("failed to parse netfilter header")?;
+        let subsys = (message_type >> 8) as u8;
+        let message_type = message_type as u8;
+        let inner = match Subsystem::from(subsys) {
+            Subsystem::None => NetfilterMessageInner::None(
+                ControlMessage::parse_with_param(
+                    &buf[NETFILTER_HEADER_LEN..],
+                    message_type,
+                )
+                .context("failed to parse nfnetlink control message payload")?,
+            ),
+            Subsystem::ULog => NetfilterMessageInner::ULog(
+                ULogMessage::parse_with_param(
+                    &buf[NETFILTER_HEADER_LEN..],
+                    message_type,
+                )
+                .context("failed to parse nflog payload")?,
+            ),
+            Subsystem::Conntrack => NetfilterMessageInner::Conntrack(
+                ConntrackMessage::parse_with_param(
+                    &buf[NETFILTER_HEADER_LEN..],
+                    message_type,
+                )
+                .context("failed to parse conntrack payload")?,
+            ),
+            Subsystem::NfTables => NetfilterMessageInner::NfTables(
+                NfTablesMessage::parse_with_param(
+                    &buf[NETFILTER_HEADER_LEN..],
+                    message_type,
+                )
+                .context("failed to parse nftables payload")?,
+            ),
+            subsys_enum @ Subsystem::Other(_) => NetfilterMessageInner::Other {
+                subsys: subsys_enum,
+                message_type,
+                attributes: crate::nlas::default_nlas(
+                    &buf[NETFILTER_HEADER_LEN..],
+                )?,
+            },
+        };
+        Ok(NetfilterMessage::new(header, inner))
+    }
+}
+
 impl Emitable for NetfilterMessage {
     fn buffer_len(&self) -> usize {
         self.header.buffer_len() + self.inner.buffer_len()
@@ -298,16 +372,7 @@ impl NetlinkDeserializable for NetfilterMessage {
         header: &NetlinkHeader,
         payload: &[u8],
     ) -> Result<Self, Self::Error> {
-        match NetfilterBuffer::new_checked(payload) {
-            Err(e) => Err(e),
-            Ok(buffer) => match NetfilterMessage::parse_with_param(
-                &buffer,
-                header.message_type,
-            ) {
-                Err(e) => Err(e),
-                Ok(message) => Ok(message),
-            },
-        }
+        NetfilterMessage::parse_with_param(payload, header.message_type)
     }
 }
 

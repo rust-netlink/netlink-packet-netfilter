@@ -5,7 +5,6 @@ use std::net::IpAddr;
 use netlink_packet_core::{Emitable, ParseableParametrized};
 
 use crate::{
-    buffer::NetfilterBuffer,
     conntrack::{
         ConntrackAttribute, ConntrackMessage, ConntrackMessageType, IPTuple,
         ProtoInfo, ProtoInfoTCP, ProtoTuple, Protocol, Status, TCPFlags, Tuple,
@@ -35,11 +34,7 @@ fn test_dump_conntrack() {
         | (u8::from(ConntrackMessageType::Get) as u16);
     // Check if the deserialization was correct
     assert_eq!(
-        NetfilterMessage::parse_with_param(
-            &NetfilterBuffer::new(&raw),
-            message_type
-        )
-        .unwrap(),
+        NetfilterMessage::parse_with_param(&raw, message_type).unwrap(),
         expected
     );
 }
@@ -103,11 +98,7 @@ fn test_get_conntrack_tcp_ipv4() {
         | (u8::from(ConntrackMessageType::Get) as u16);
     // Check if the deserialization was correct
     assert_eq!(
-        NetfilterMessage::parse_with_param(
-            &NetfilterBuffer::new(&raw),
-            message_type
-        )
-        .unwrap(),
+        NetfilterMessage::parse_with_param(&raw, message_type).unwrap(),
         expected
     );
 }
@@ -161,11 +152,7 @@ fn test_get_conntrack_udp_ipv6() {
         | (u8::from(ConntrackMessageType::Get) as u16);
     // Check if the deserialization was correct
     assert_eq!(
-        NetfilterMessage::parse_with_param(
-            &NetfilterBuffer::new(&raw),
-            message_type
-        )
-        .unwrap(),
+        NetfilterMessage::parse_with_param(&raw, message_type).unwrap(),
         expected
     );
 }
@@ -268,11 +255,7 @@ fn test_delete_conntrack_tcp_ipv4() {
         | (u8::from(ConntrackMessageType::Delete) as u16);
     // Check if the deserialization was correct
     assert_eq!(
-        NetfilterMessage::parse_with_param(
-            &NetfilterBuffer::new(&raw),
-            message_type
-        )
-        .unwrap(),
+        NetfilterMessage::parse_with_param(&raw, message_type).unwrap(),
         expected
     );
 }
@@ -367,11 +350,7 @@ fn test_delete_conntrack_udp_ipv6() {
         | (u8::from(ConntrackMessageType::Delete) as u16);
     // Check if the deserialization was correct
     assert_eq!(
-        NetfilterMessage::parse_with_param(
-            &NetfilterBuffer::new(&raw),
-            message_type
-        )
-        .unwrap(),
+        NetfilterMessage::parse_with_param(&raw, message_type).unwrap(),
         expected
     );
 }
@@ -463,11 +442,7 @@ fn test_new_conntrack() {
         | (u8::from(ConntrackMessageType::New) as u16);
     // Check if the deserialization was correct
     assert_eq!(
-        NetfilterMessage::parse_with_param(
-            &NetfilterBuffer::new(&raw),
-            message_type
-        )
-        .unwrap(),
+        NetfilterMessage::parse_with_param(&raw, message_type).unwrap(),
         expected
     );
 }

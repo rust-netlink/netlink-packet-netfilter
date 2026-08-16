@@ -1,20 +1,32 @@
 // SPDX-License-Identifier: MIT
 
-use netlink_packet_core::{
-    buffer, fields, getter, setter, DecodeError, Nla, Parseable,
-};
+use std::mem::size_of;
+
+use netlink_packet_core::{DecodeError, Nla};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
 const NFULA_CFG_MODE: u16 = libc::NFULA_CFG_MODE as u16;
 const NFULNL_COPY_NONE: u8 = libc::NFULNL_COPY_NONE as u8;
 const NFULNL_COPY_META: u8 = libc::NFULNL_COPY_META as u8;
 const NFULNL_COPY_PACKET: u8 = libc::NFULNL_COPY_PACKET as u8;
 
-const CONFIG_MODE_LEN: usize = 6;
-
-buffer!(ConfigModeBuffer(CONFIG_MODE_LEN) {
-    copy_range: (u32, 0..4),
-    copy_mode: (u8, 4),
-});
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    Clone,
+    FromBytes,
+    IntoBytes,
+    KnownLayout,
+    Immutable,
+    Unaligned,
+)]
+#[repr(C, packed)]
+pub struct ConfigModeBuffer {
+    copy_range: u32,
+    copy_mode: u8,
+    _pad: [u8; 1],
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CopyMode {
@@ -78,11 +90,35 @@ impl ConfigMode {
     pub fn new_packet(copy_range: u32) -> Self {
         Self::new(copy_range, CopyMode::Packet)
     }
+
+    pub fn parse(payload: &[u8]) -> Result<Self, DecodeError> {
+        let (raw, _) =
+            ConfigModeBuffer::ref_from_prefix(payload).map_err(|_| {
+                DecodeError::buffer_too_small(
+                    payload.len(),
+                    size_of::<ConfigModeBuffer>(),
+                )
+            })?;
+        Ok(Self {
+            copy_range: u32::from_be(raw.copy_range),
+            copy_mode: raw.copy_mode.into(),
+        })
+    }
+}
+
+impl From<&ConfigMode> for ConfigModeBuffer {
+    fn from(value: &ConfigMode) -> Self {
+        Self {
+            copy_range: value.copy_range.to_be(),
+            copy_mode: value.copy_mode.into(),
+            _pad: [0; 1],
+        }
+    }
 }
 
 impl Nla for ConfigMode {
     fn value_len(&self) -> usize {
-        CONFIG_MODE_LEN
+        size_of::<ConfigModeBuffer>()
     }
 
     fn kind(&self) -> u16 {
@@ -90,17 +126,7 @@ impl Nla for ConfigMode {
     }
 
     fn emit_value(&self, buf: &mut [u8]) {
-        let mut buf = ConfigModeBuffer::new(buf);
-        buf.set_copy_range(self.copy_range.to_be());
-        buf.set_copy_mode(self.copy_mode.into())
-    }
-}
-
-impl<T: AsRef<[u8]>> Parseable<ConfigModeBuffer<T>> for ConfigMode {
-    fn parse(buf: &ConfigModeBuffer<T>) -> Result<Self, DecodeError> {
-        Ok(ConfigMode {
-            copy_range: u32::from_be(buf.copy_range()),
-            copy_mode: buf.copy_mode().into(),
-        })
+        let raw = ConfigModeBuffer::from(self);
+        buf.copy_from_slice(raw.as_bytes());
     }
 }

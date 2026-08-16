@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-use crate::{
-    buffer::NetfilterBuffer,
-    nftables::{
-        chain::ChainMessage, r#gen::GenMessage, rule::RuleMessage,
-        set::SetMessage, set_element::SetElementMessage, table::TableMessage,
-    },
+use crate::nftables::{
+    chain::ChainMessage, r#gen::GenMessage, rule::RuleMessage, set::SetMessage,
+    set_element::SetElementMessage, table::TableMessage,
 };
+use crate::nlas::default_nlas;
 
 use netlink_packet_core::{
     DecodeError, DefaultNla, Emitable, ErrorContext as _, Parseable,
@@ -371,11 +369,9 @@ impl Emitable for NfTablesMessage {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized>
-    ParseableParametrized<NetfilterBuffer<&'a T>, u8> for NfTablesMessage
-{
+impl ParseableParametrized<[u8], u8> for NfTablesMessage {
     fn parse_with_param(
-        buf: &NetfilterBuffer<&'a T>,
+        buf: &[u8],
         message_type: u8,
     ) -> Result<Self, DecodeError> {
         Ok(match NfTablesMessageType::from(message_type) {
@@ -437,43 +433,42 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
             }
 
             NfTablesMessageType::Trace => NfTablesMessage::Trace(
-                buf.default_nlas()
+                default_nlas(buf)
                     .context("failed to parse trace message nla")?,
             ),
 
             NfTablesMessageType::NewObject => NfTablesMessage::NewObject(
-                buf.default_nlas()
+                default_nlas(buf)
                     .context("failed to parse object message nla")?,
             ),
             NfTablesMessageType::GetObject => NfTablesMessage::GetObject(
-                buf.default_nlas()
+                default_nlas(buf)
                     .context("failed to parse object message nla")?,
             ),
             NfTablesMessageType::DeleteObject => NfTablesMessage::DeleteObject(
-                buf.default_nlas()
+                default_nlas(buf)
                     .context("failed to parse trace object message nla")?,
             ),
 
             NfTablesMessageType::NewFlowTable => NfTablesMessage::NewFlowTable(
-                buf.default_nlas()
+                default_nlas(buf)
                     .context("failed to parse trace flow table message nla")?,
             ),
             NfTablesMessageType::GetFlowTable => NfTablesMessage::GetFlowTable(
-                buf.default_nlas()
+                default_nlas(buf)
                     .context("failed to parse trace flow table message nla")?,
             ),
             NfTablesMessageType::DeleteFlowTable => {
                 NfTablesMessage::DeleteFlowTable(
-                    buf.default_nlas().context(
+                    default_nlas(buf).context(
                         "failed to parse trace flow table message nla",
                     )?,
                 )
             }
 
             NfTablesMessageType::Other(message_type) => {
-                let attributes = buf
-                    .default_nlas()
-                    .context("failed to parse message nla")?;
+                let attributes =
+                    default_nlas(buf).context("failed to parse message nla")?;
                 NfTablesMessage::Other {
                     message_type,
                     attributes,

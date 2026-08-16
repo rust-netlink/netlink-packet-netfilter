@@ -1,17 +1,28 @@
 // SPDX-License-Identifier: MIT
 
-use netlink_packet_core::{
-    buffer, fields, getter, setter, DecodeError, Nla, Parseable,
-};
+use std::mem::size_of;
+
+use netlink_packet_core::{DecodeError, Nla};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
 use crate::constants::NFULA_TIMESTAMP;
 
-const TIMESTAMP_LEN: usize = 16;
-
-buffer!(TimeStampBuffer(TIMESTAMP_LEN) {
-    sec: (u64, 0..8),
-    usec: (u64, 8..16),
-});
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    Clone,
+    FromBytes,
+    IntoBytes,
+    KnownLayout,
+    Immutable,
+    Unaligned,
+)]
+#[repr(C, packed)]
+pub struct TimeStampBuffer {
+    sec: u64,
+    usec: u64,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TimeStamp {
@@ -19,9 +30,34 @@ pub struct TimeStamp {
     usec: u64,
 }
 
+impl TimeStamp {
+    pub fn parse(payload: &[u8]) -> Result<Self, DecodeError> {
+        let (raw, _) =
+            TimeStampBuffer::ref_from_prefix(payload).map_err(|_| {
+                DecodeError::buffer_too_small(
+                    payload.len(),
+                    size_of::<TimeStampBuffer>(),
+                )
+            })?;
+        Ok(Self {
+            sec: u64::from_be(raw.sec),
+            usec: u64::from_be(raw.usec),
+        })
+    }
+}
+
+impl From<&TimeStamp> for TimeStampBuffer {
+    fn from(value: &TimeStamp) -> Self {
+        Self {
+            sec: value.sec.to_be(),
+            usec: value.usec.to_be(),
+        }
+    }
+}
+
 impl Nla for TimeStamp {
     fn value_len(&self) -> usize {
-        TIMESTAMP_LEN
+        size_of::<TimeStampBuffer>()
     }
 
     fn kind(&self) -> u16 {
@@ -29,17 +65,7 @@ impl Nla for TimeStamp {
     }
 
     fn emit_value(&self, buf: &mut [u8]) {
-        let mut buf = TimeStampBuffer::new(buf);
-        buf.set_sec(self.sec.to_be());
-        buf.set_usec(self.usec.to_be())
-    }
-}
-
-impl<T: AsRef<[u8]>> Parseable<TimeStampBuffer<T>> for TimeStamp {
-    fn parse(buf: &TimeStampBuffer<T>) -> Result<Self, DecodeError> {
-        Ok(TimeStamp {
-            sec: u64::from_be(buf.sec()),
-            usec: u64::from_be(buf.usec()),
-        })
+        let raw = TimeStampBuffer::from(self);
+        buf.copy_from_slice(raw.as_bytes());
     }
 }

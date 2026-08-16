@@ -2,20 +2,17 @@
 
 use netlink_packet_core::{DecodeError, ErrorContext as _, Parseable};
 
-use crate::buffer::NetfilterBuffer;
 use crate::nftables::set::SetAttribute;
+use crate::nlas::parse_all_nlas;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SetMessage {
     pub attributes: Vec<SetAttribute>,
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NetfilterBuffer<&'a T>>
-    for SetMessage
-{
-    fn parse(buf: &NetfilterBuffer<&'a T>) -> Result<Self, DecodeError> {
-        let attributes = buf
-            .parse_all_nlas(|buf| SetAttribute::parse(&buf))
+impl Parseable<[u8]> for SetMessage {
+    fn parse(buf: &[u8]) -> Result<Self, DecodeError> {
+        let attributes = parse_all_nlas(buf, |buf| SetAttribute::parse(&buf))
             .context("failed to parse set message nla")?;
         Ok(Self { attributes })
     }
