@@ -4,7 +4,7 @@ use netlink_packet_core::{
     DecodeError, DefaultNla, Emitable, Parseable, ParseableParametrized,
 };
 
-use crate::nflog::nlas::{config::ConfigNla, packet::PacketNla};
+use crate::nflog::{ConfigNla, PacketNla};
 use crate::nlas::parse_all_nlas;
 
 #[derive(Debug, PartialEq, Eq, Clone)]

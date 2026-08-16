@@ -8,32 +8,19 @@ use netlink_packet_core::{
     NLM_F_CREATE, NLM_F_MATCH, NLM_F_REQUEST, NLM_F_ROOT,
 };
 
-use crate::nftables::attributes::expression::{
-    Bitwise, ChecksumFlags, Cmp, Expressions, Immediate, Lookup, Meta, MetaKey,
-    Operator, Payload, Register,
-};
-use crate::nftables::attributes::{
-    DataAttribute, ExpressionAttribute, ListAttribute, Verdict,
+use crate::nftables::{
+    Bitwise, ChainAttribute, ChainMessage, ChecksumFlags, Cmp, DataAttribute,
+    ExpressionAttribute, Expressions, GenAttribute, GenMessage, Hook,
+    Immediate, InetHookNumber, ListAttribute, Lookup, Meta, MetaKey,
+    NfTablesMessage, Operator, Payload, Register, RuleAttribute, RuleMessage,
+    SetAttribute, SetElementAttribute, SetElementList, SetElementMessage,
+    SetFlags, SetMessage, TableAttribute, TableFlags, TableMessage, Verdict,
     VerdictAttribute,
-};
-use crate::nftables::chain::{ChainAttribute, Hook, InetHookNumber};
-use crate::nftables::rule::{RuleAttribute, RuleMessage};
-use crate::nftables::set::SetFlags;
-use crate::nftables::set_element::{
-    SetElementAttribute, SetElementList, SetElementMessage,
 };
 
 const NFNL_SUBSYS_NFTABLES: u8 = libc::NFNL_SUBSYS_NFTABLES as u8;
-use crate::nftables::table::{TableAttribute, TableFlags};
-use crate::nftables::{
-    chain::ChainMessage, r#gen::GenAttribute, set::SetAttribute,
-    set::SetMessage, table::TableMessage,
-};
 use crate::none::ControlMessage;
-use crate::{
-    nftables::{gen::GenMessage, NfTablesMessage},
-    NetfilterHeader, NetfilterMessage, ProtoFamily,
-};
+use crate::{NetfilterHeader, NetfilterMessage, ProtoFamily};
 
 const IPV6_TYPE_NFT: u32 = 0x08;
 

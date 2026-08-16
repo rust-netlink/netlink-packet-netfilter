@@ -11,11 +11,7 @@ use std::time::Duration;
 use netlink_packet_core::{parse_ip, NetlinkMessage, NetlinkPayload};
 use netlink_packet_netfilter::{
     nflog::{
-        config_request,
-        nlas::{
-            config::{ConfigCmd, ConfigFlags, ConfigMode, Timeout},
-            packet::PacketNla,
-        },
+        config_request, ConfigCmd, ConfigFlags, ConfigMode, PacketNla, Timeout,
         ULogMessage,
     },
     NetfilterMessage, NetfilterMessageInner, ProtoFamily,

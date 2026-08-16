@@ -2,4 +2,4 @@
 
 mod message;
 
-pub use message::ControlMessage;
+pub use self::message::ControlMessage;

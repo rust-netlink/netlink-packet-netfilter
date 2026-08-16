@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-mod message;
-pub use message::{ConntrackMessage, ConntrackMessageType};
 mod attributes;
-pub use attributes::{
+mod message;
+
+pub use self::attributes::{
     ConntrackAttribute, IPTuple, ProtoInfo, ProtoInfoTCP, ProtoTuple, Protocol,
     Status, TCPFlags, Tuple,
 };
+pub use self::message::{ConntrackMessage, ConntrackMessageType};
