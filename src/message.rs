@@ -11,10 +11,11 @@ use crate::{
     none::ControlMessage,
 };
 
-// ProtoFamily represents a protocol family in the Netfilter header (nfgenmsg).
+// NetfilterProtoFamily represents a protocol family in the Netfilter header
+// (nfgenmsg).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
-pub enum ProtoFamily {
+pub enum NetfilterProtoFamily {
     Unspec,
     Inet,
     IPv4,
@@ -35,34 +36,34 @@ const NFPROTO_BRIDGE: u8 = 7;
 const NFPROTO_IPV6: u8 = 10;
 const NFPROTO_DECNET: u8 = 12;
 
-impl From<ProtoFamily> for u8 {
-    fn from(proto_family: ProtoFamily) -> Self {
+impl From<NetfilterProtoFamily> for u8 {
+    fn from(proto_family: NetfilterProtoFamily) -> Self {
         match proto_family {
-            ProtoFamily::Unspec => NFPROTO_UNSPEC,
-            ProtoFamily::Inet => NFPROTO_INET,
-            ProtoFamily::IPv4 => NFPROTO_IPV4,
-            ProtoFamily::ARP => NFPROTO_ARP,
-            ProtoFamily::NetDev => NFPROTO_NETDEV,
-            ProtoFamily::Bridge => NFPROTO_BRIDGE,
-            ProtoFamily::IPv6 => NFPROTO_IPV6,
-            ProtoFamily::DECNet => NFPROTO_DECNET,
-            ProtoFamily::Other(p) => p,
+            NetfilterProtoFamily::Unspec => NFPROTO_UNSPEC,
+            NetfilterProtoFamily::Inet => NFPROTO_INET,
+            NetfilterProtoFamily::IPv4 => NFPROTO_IPV4,
+            NetfilterProtoFamily::ARP => NFPROTO_ARP,
+            NetfilterProtoFamily::NetDev => NFPROTO_NETDEV,
+            NetfilterProtoFamily::Bridge => NFPROTO_BRIDGE,
+            NetfilterProtoFamily::IPv6 => NFPROTO_IPV6,
+            NetfilterProtoFamily::DECNet => NFPROTO_DECNET,
+            NetfilterProtoFamily::Other(p) => p,
         }
     }
 }
 
-impl From<u8> for ProtoFamily {
+impl From<u8> for NetfilterProtoFamily {
     fn from(proto_family_num: u8) -> Self {
         match proto_family_num {
-            NFPROTO_UNSPEC => ProtoFamily::Unspec,
-            NFPROTO_INET => ProtoFamily::Inet,
-            NFPROTO_IPV4 => ProtoFamily::IPv4,
-            NFPROTO_ARP => ProtoFamily::ARP,
-            NFPROTO_NETDEV => ProtoFamily::NetDev,
-            NFPROTO_BRIDGE => ProtoFamily::Bridge,
-            NFPROTO_IPV6 => ProtoFamily::IPv6,
-            NFPROTO_DECNET => ProtoFamily::DECNet,
-            _ => ProtoFamily::Other(proto_family_num),
+            NFPROTO_UNSPEC => NetfilterProtoFamily::Unspec,
+            NFPROTO_INET => NetfilterProtoFamily::Inet,
+            NFPROTO_IPV4 => NetfilterProtoFamily::IPv4,
+            NFPROTO_ARP => NetfilterProtoFamily::ARP,
+            NFPROTO_NETDEV => NetfilterProtoFamily::NetDev,
+            NFPROTO_BRIDGE => NetfilterProtoFamily::Bridge,
+            NFPROTO_IPV6 => NetfilterProtoFamily::IPv6,
+            NFPROTO_DECNET => NetfilterProtoFamily::DECNet,
+            _ => NetfilterProtoFamily::Other(proto_family_num),
         }
     }
 }
@@ -90,13 +91,13 @@ pub struct NetfilterHeaderBuffer {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct NetfilterHeader {
-    pub family: ProtoFamily,
+    pub family: NetfilterProtoFamily,
     pub version: u8,
     pub res_id: u16,
 }
 
 impl NetfilterHeader {
-    pub fn new(family: ProtoFamily, version: u8, res_id: u16) -> Self {
+    pub fn new(family: NetfilterProtoFamily, version: u8, res_id: u16) -> Self {
         Self {
             family,
             version,
@@ -149,7 +150,7 @@ const NFNL_SUBSYS_NFTABLES: u8 = 10;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
-pub enum Subsystem {
+pub enum NetfilterSubsystem {
     None,
     ULog,
     Conntrack,
@@ -157,7 +158,7 @@ pub enum Subsystem {
     Other(u8),
 }
 
-impl From<u8> for Subsystem {
+impl From<u8> for NetfilterSubsystem {
     fn from(value: u8) -> Self {
         match value {
             NFNL_SUBSYS_NONE => Self::None,
@@ -169,14 +170,14 @@ impl From<u8> for Subsystem {
     }
 }
 
-impl From<Subsystem> for u8 {
-    fn from(value: Subsystem) -> Self {
+impl From<NetfilterSubsystem> for u8 {
+    fn from(value: NetfilterSubsystem) -> Self {
         match value {
-            Subsystem::None => NFNL_SUBSYS_NONE,
-            Subsystem::ULog => NFNL_SUBSYS_ULOG,
-            Subsystem::Conntrack => NFNL_SUBSYS_CTNETLINK,
-            Subsystem::NfTables => NFNL_SUBSYS_NFTABLES,
-            Subsystem::Other(v) => v,
+            NetfilterSubsystem::None => NFNL_SUBSYS_NONE,
+            NetfilterSubsystem::ULog => NFNL_SUBSYS_ULOG,
+            NetfilterSubsystem::Conntrack => NFNL_SUBSYS_CTNETLINK,
+            NetfilterSubsystem::NfTables => NFNL_SUBSYS_NFTABLES,
+            NetfilterSubsystem::Other(v) => v,
         }
     }
 }
@@ -189,7 +190,7 @@ pub enum NetfilterMessageInner {
     Conntrack(ConntrackMessage),
     NfTables(NfTablesMessage),
     Other {
-        subsys: Subsystem,
+        subsys: NetfilterSubsystem,
         message_type: u8,
         attributes: Vec<DefaultNla>,
     },
@@ -200,6 +201,7 @@ impl From<ULogMessage> for NetfilterMessageInner {
         Self::ULog(message)
     }
 }
+
 impl From<ConntrackMessage> for NetfilterMessageInner {
     fn from(message: ConntrackMessage) -> Self {
         Self::Conntrack(message)
@@ -262,12 +264,14 @@ impl NetfilterMessage {
         }
     }
 
-    pub fn subsys(&self) -> Subsystem {
+    pub fn subsys(&self) -> NetfilterSubsystem {
         match self.inner {
-            NetfilterMessageInner::None(_) => Subsystem::None,
-            NetfilterMessageInner::ULog(_) => Subsystem::ULog,
-            NetfilterMessageInner::Conntrack(_) => Subsystem::Conntrack,
-            NetfilterMessageInner::NfTables(_) => Subsystem::NfTables,
+            NetfilterMessageInner::None(_) => NetfilterSubsystem::None,
+            NetfilterMessageInner::ULog(_) => NetfilterSubsystem::ULog,
+            NetfilterMessageInner::Conntrack(_) => {
+                NetfilterSubsystem::Conntrack
+            }
+            NetfilterMessageInner::NfTables(_) => NetfilterSubsystem::NfTables,
             NetfilterMessageInner::Other { subsys, .. } => subsys,
         }
     }
@@ -300,42 +304,44 @@ impl ParseableParametrized<[u8], u16> for NetfilterMessage {
             .context("failed to parse netfilter header")?;
         let subsys = (message_type >> 8) as u8;
         let message_type = message_type as u8;
-        let inner = match Subsystem::from(subsys) {
-            Subsystem::None => NetfilterMessageInner::None(
+        let inner = match NetfilterSubsystem::from(subsys) {
+            NetfilterSubsystem::None => NetfilterMessageInner::None(
                 ControlMessage::parse_with_param(
                     &buf[NETFILTER_HEADER_LEN..],
                     message_type,
                 )
                 .context("failed to parse nfnetlink control message payload")?,
             ),
-            Subsystem::ULog => NetfilterMessageInner::ULog(
+            NetfilterSubsystem::ULog => NetfilterMessageInner::ULog(
                 ULogMessage::parse_with_param(
                     &buf[NETFILTER_HEADER_LEN..],
                     message_type,
                 )
                 .context("failed to parse nflog payload")?,
             ),
-            Subsystem::Conntrack => NetfilterMessageInner::Conntrack(
+            NetfilterSubsystem::Conntrack => NetfilterMessageInner::Conntrack(
                 ConntrackMessage::parse_with_param(
                     &buf[NETFILTER_HEADER_LEN..],
                     message_type,
                 )
                 .context("failed to parse conntrack payload")?,
             ),
-            Subsystem::NfTables => NetfilterMessageInner::NfTables(
+            NetfilterSubsystem::NfTables => NetfilterMessageInner::NfTables(
                 NfTablesMessage::parse_with_param(
                     &buf[NETFILTER_HEADER_LEN..],
                     message_type,
                 )
                 .context("failed to parse nftables payload")?,
             ),
-            subsys_enum @ Subsystem::Other(_) => NetfilterMessageInner::Other {
-                subsys: subsys_enum,
-                message_type,
-                attributes: crate::nlas::default_nlas(
-                    &buf[NETFILTER_HEADER_LEN..],
-                )?,
-            },
+            subsys_enum @ NetfilterSubsystem::Other(_) => {
+                NetfilterMessageInner::Other {
+                    subsys: subsys_enum,
+                    message_type,
+                    attributes: crate::nlas::default_nlas(
+                        &buf[NETFILTER_HEADER_LEN..],
+                    )?,
+                }
+            }
         };
         Ok(NetfilterMessage::new(header, inner))
     }

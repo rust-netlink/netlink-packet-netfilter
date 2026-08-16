@@ -8,6 +8,7 @@ use crate::nflog::{ConfigNla, PacketNla};
 use crate::nlas::parse_all_nlas;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[non_exhaustive]
 pub enum ULogMessage {
     Config(Vec<ConfigNla>),
     Packet(Vec<PacketNla>),

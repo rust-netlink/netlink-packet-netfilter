@@ -14,6 +14,7 @@ const NF_INET_POST_ROUTING: u32 = 4;
 const NF_INET_INGRESS: u32 = 5;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[non_exhaustive]
 pub enum InetHookNumber {
     PreRouting,
     LocalIn,
@@ -56,6 +57,7 @@ const NF_NETDEV_INGRESS: u32 = 0;
 const NF_NETDEV_EGRESS: u32 = 1;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[non_exhaustive]
 pub enum DevHookNumber {
     Ingress,
     Egress,
@@ -103,6 +105,7 @@ impl From<DevHookNumber> for HookNumber {
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[non_exhaustive]
 pub(crate) enum HookType {
     #[default]
     Inet,

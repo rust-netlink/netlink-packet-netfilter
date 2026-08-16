@@ -16,6 +16,7 @@ const NFULA_CFG_QTHRESH: u16 = libc::NFULA_CFG_QTHRESH as u16;
 const NFULA_CFG_TIMEOUT: u16 = libc::NFULA_CFG_TIMEOUT as u16;
 
 #[derive(Clone, Debug, PartialEq, Eq, From, IsVariant)]
+#[non_exhaustive]
 pub enum ConfigNla {
     Cmd(ConfigCmd),
     Mode(ConfigMode),

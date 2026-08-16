@@ -10,6 +10,7 @@ const NFULNL_CFG_CMD_PF_BIND: u8 = libc::NFULNL_CFG_CMD_PF_BIND as u8;
 const NFULNL_CFG_CMD_PF_UNBIND: u8 = libc::NFULNL_CFG_CMD_PF_UNBIND as u8;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ConfigCmd {
     None,
     Bind,

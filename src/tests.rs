@@ -9,7 +9,7 @@ use crate::{
         ConntrackAttribute, ConntrackMessage, ConntrackMessageType, IPTuple,
         ProtoInfo, ProtoInfoTCP, ProtoTuple, Protocol, Status, TCPFlags, Tuple,
     },
-    message::{ProtoFamily, Subsystem},
+    message::{NetfilterProtoFamily, NetfilterSubsystem},
     NetfilterHeader, NetfilterMessage,
 };
 
@@ -20,7 +20,7 @@ fn test_dump_conntrack() {
     let raw: Vec<u8> = vec![0x00, 0x00, 0x00, 0x00];
 
     let expected: NetfilterMessage = NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::Unspec, 0, 0),
         ConntrackMessage::Get(vec![]),
     );
 
@@ -30,7 +30,7 @@ fn test_dump_conntrack() {
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
 
-    let message_type = ((u8::from(Subsystem::Conntrack) as u16) << 8)
+    let message_type = ((u8::from(NetfilterSubsystem::Conntrack) as u16) << 8)
         | (u8::from(ConntrackMessageType::Get) as u16);
     // Check if the deserialization was correct
     assert_eq!(
@@ -84,7 +84,7 @@ fn test_get_conntrack_tcp_ipv4() {
     ];
 
     let expected: NetfilterMessage = NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv4, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv4, 0, 0),
         ConntrackMessage::Get(attributes),
     );
 
@@ -94,7 +94,7 @@ fn test_get_conntrack_tcp_ipv4() {
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
 
-    let message_type = ((u8::from(Subsystem::Conntrack) as u16) << 8)
+    let message_type = ((u8::from(NetfilterSubsystem::Conntrack) as u16) << 8)
         | (u8::from(ConntrackMessageType::Get) as u16);
     // Check if the deserialization was correct
     assert_eq!(
@@ -138,7 +138,7 @@ fn test_get_conntrack_udp_ipv6() {
     ])];
 
     let expected: NetfilterMessage = NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv6, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv6, 0, 0),
         ConntrackMessage::Get(attributes),
     );
 
@@ -148,7 +148,7 @@ fn test_get_conntrack_udp_ipv6() {
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
 
-    let message_type = ((u8::from(Subsystem::Conntrack) as u16) << 8)
+    let message_type = ((u8::from(NetfilterSubsystem::Conntrack) as u16) << 8)
         | (u8::from(ConntrackMessageType::Get) as u16);
     // Check if the deserialization was correct
     assert_eq!(
@@ -241,7 +241,7 @@ fn test_delete_conntrack_tcp_ipv4() {
     ];
 
     let expected: NetfilterMessage = NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv4, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv4, 0, 0),
         ConntrackMessage::Delete(attributes),
     );
 
@@ -251,7 +251,7 @@ fn test_delete_conntrack_tcp_ipv4() {
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
 
-    let message_type = ((u8::from(Subsystem::Conntrack) as u16) << 8)
+    let message_type = ((u8::from(NetfilterSubsystem::Conntrack) as u16) << 8)
         | (u8::from(ConntrackMessageType::Delete) as u16);
     // Check if the deserialization was correct
     assert_eq!(
@@ -336,7 +336,7 @@ fn test_delete_conntrack_udp_ipv6() {
     ];
 
     let expected: NetfilterMessage = NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv6, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv6, 0, 0),
         ConntrackMessage::Delete(attributes),
     );
 
@@ -346,7 +346,7 @@ fn test_delete_conntrack_udp_ipv6() {
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
 
-    let message_type = ((u8::from(Subsystem::Conntrack) as u16) << 8)
+    let message_type = ((u8::from(NetfilterSubsystem::Conntrack) as u16) << 8)
         | (u8::from(ConntrackMessageType::Delete) as u16);
     // Check if the deserialization was correct
     assert_eq!(
@@ -428,7 +428,7 @@ fn test_new_conntrack() {
     ];
 
     let expected: NetfilterMessage = NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv4, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv4, 0, 0),
         ConntrackMessage::New(attributes),
     );
 
@@ -438,7 +438,7 @@ fn test_new_conntrack() {
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
 
-    let message_type = ((u8::from(Subsystem::Conntrack) as u16) << 8)
+    let message_type = ((u8::from(NetfilterSubsystem::Conntrack) as u16) << 8)
         | (u8::from(ConntrackMessageType::New) as u16);
     // Check if the deserialization was correct
     assert_eq!(

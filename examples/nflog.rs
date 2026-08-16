@@ -14,7 +14,7 @@ use netlink_packet_netfilter::{
         config_request, ConfigCmd, ConfigFlags, ConfigMode, PacketNla, Timeout,
         ULogMessage,
     },
-    NetfilterMessage, NetfilterMessageInner, ProtoFamily,
+    NetfilterMessage, NetfilterMessageInner, NetfilterProtoFamily,
 };
 use netlink_sys::{constants::NETLINK_NETFILTER, Socket};
 
@@ -38,8 +38,11 @@ fn main() {
     socket.bind_auto().unwrap();
 
     // Then we issue the PfBind command
-    let packet =
-        config_request(ProtoFamily::IPv4, 0, vec![ConfigCmd::PfBind.into()]);
+    let packet = config_request(
+        NetfilterProtoFamily::IPv4,
+        0,
+        vec![ConfigCmd::PfBind.into()],
+    );
     let mut buf = vec![0; packet.header.length as usize];
     packet.serialize(&mut buf[..]);
     println!(">>> {:?}", packet);
@@ -60,7 +63,7 @@ fn main() {
     // also set various parameters at the same time
     let timeout: Timeout = Duration::from_millis(100).into();
     let packet = config_request(
-        ProtoFamily::IPv4,
+        NetfilterProtoFamily::IPv4,
         1,
         vec![
             ConfigCmd::Bind.into(),

@@ -20,7 +20,7 @@ use crate::nftables::{
 
 const NFNL_SUBSYS_NFTABLES: u8 = libc::NFNL_SUBSYS_NFTABLES as u8;
 use crate::none::ControlMessage;
-use crate::{NetfilterHeader, NetfilterMessage, ProtoFamily};
+use crate::{NetfilterHeader, NetfilterMessage, NetfilterProtoFamily};
 
 const IPV6_TYPE_NFT: u32 = 0x08;
 
@@ -49,7 +49,7 @@ fn test_nft_list_ruleset() {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
     let get_gen = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::Unspec, 0, 0),
         NfTablesMessage::GetGen(GenMessage { attributes: vec![] }),
     ));
     msgs.push((raw_get_gen, get_gen));
@@ -59,7 +59,7 @@ fn test_nft_list_ruleset() {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
     let mut get_table = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::Unspec, 0, 0),
         NfTablesMessage::GetTable(TableMessage { attributes: vec![] }),
     ));
     get_table.header.flags = NLM_F_ROOT | NLM_F_MATCH;
@@ -70,7 +70,7 @@ fn test_nft_list_ruleset() {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
     let mut get_chain = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::Unspec, 0, 0),
         NfTablesMessage::GetChain(ChainMessage { attributes: vec![] }),
     ));
     get_chain.header.flags = NLM_F_ROOT | NLM_F_MATCH;
@@ -81,7 +81,7 @@ fn test_nft_list_ruleset() {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
     let mut get_set = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::Unspec, 0, 0),
         NfTablesMessage::GetSet(SetMessage { attributes: vec![] }),
     ));
     get_set.header.flags = NLM_F_ROOT | NLM_F_MATCH;
@@ -93,7 +93,7 @@ fn test_nft_list_ruleset() {
     ];
 
     let mut get_obj = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::Unspec, 0, 0),
         NfTablesMessage::GetObject(vec![]),
     ));
     get_obj.header.flags = NLM_F_ROOT | NLM_F_MATCH;
@@ -104,7 +104,7 @@ fn test_nft_list_ruleset() {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
     let mut get_flow_table = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::Unspec, 0, 0),
         NfTablesMessage::GetFlowTable(vec![]),
     ));
     get_flow_table.header.flags = NLM_F_ROOT | NLM_F_MATCH;
@@ -123,7 +123,7 @@ fn test_nft_list_ruleset() {
         0x08, 0x00, 0x03, 0x00, 0x6e, 0x66, 0x74, 0x00,
     ];
     let mut new_gen = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, 1),
+        NetfilterHeader::new(NetfilterProtoFamily::Unspec, 0, 1),
         NfTablesMessage::NewGen(GenMessage {
             attributes: vec![
                 GenAttribute::Id(1),
@@ -169,7 +169,11 @@ fn test_nft_load_examle_file() {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a,
     ];
     let batch_begin = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, NFNL_SUBSYS_NFTABLES as _),
+        NetfilterHeader::new(
+            NetfilterProtoFamily::Unspec,
+            0,
+            NFNL_SUBSYS_NFTABLES as _,
+        ),
         ControlMessage::BatchBegin,
     ));
     msgs.push((raw_batch_begin, batch_begin));
@@ -183,7 +187,7 @@ fn test_nft_load_examle_file() {
         0x69, 0xa4, 0x96, 0x94,
     ];
     let new_table = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv6, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv6, 0, 0),
         NfTablesMessage::NewTable(TableMessage {
             attributes: vec![
                 TableAttribute::Name("foo_table".to_string()),
@@ -208,7 +212,7 @@ fn test_nft_load_examle_file() {
         0xff, 0xff, 0xfe, 0xd4,
     ];
     let mut hookin_chain = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv6, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv6, 0, 0),
         NfTablesMessage::NewChain(ChainMessage {
             attributes: vec![
                 ChainAttribute::Table("foo_table".to_string()),
@@ -232,7 +236,7 @@ fn test_nft_load_examle_file() {
         0x0c, 0x00, 0x03, 0x00, 0x66, 0x6f, 0x72, 0x77, 0x61, 0x72, 0x64, 0x00,
     ];
     let mut forward_chain = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv6, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv6, 0, 0),
         NfTablesMessage::NewChain(ChainMessage {
             attributes: vec![
                 ChainAttribute::Table("foo_table".to_string()),
@@ -258,7 +262,7 @@ fn test_nft_load_examle_file() {
         0x06, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     ];
     let mut bar_map = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv6, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv6, 0, 0),
         NfTablesMessage::NewSet(SetMessage {
             attributes: vec![
                 SetAttribute::Table("foo_table".to_string()),
@@ -303,7 +307,7 @@ fn test_nft_load_examle_file() {
         0x61, 0x72, 0x64, 0x00,
     ];
     let mut hookin_rule = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv6, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv6, 0, 0),
         NfTablesMessage::NewRule(RuleMessage {
             attributes: vec![
                 RuleAttribute::Table("foo_table".to_string()),
@@ -376,7 +380,7 @@ fn test_nft_load_examle_file() {
         0x66, 0x6f, 0x72, 0x77, 0x61, 0x72, 0x64, 0x00,
     ];
     let mut hookin_rule2 = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv6, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv6, 0, 0),
         NfTablesMessage::NewRule(RuleMessage {
             attributes: vec![
                 RuleAttribute::Table("foo_table".to_string()),
@@ -461,7 +465,7 @@ fn test_nft_load_examle_file() {
         0x6e, 0x6f, 0x74, 0x72, 0x61, 0x63, 0x6b, 0x00,
     ];
     let mut forward_rule = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv6, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv6, 0, 0),
         NfTablesMessage::NewRule(RuleMessage {
             attributes: vec![
                 RuleAttribute::Table("foo_table".to_string()),
@@ -508,7 +512,11 @@ fn test_nft_load_examle_file() {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a,
     ];
     let batch_end = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, NFNL_SUBSYS_NFTABLES as _),
+        NetfilterHeader::new(
+            NetfilterProtoFamily::Unspec,
+            0,
+            NFNL_SUBSYS_NFTABLES as _,
+        ),
         ControlMessage::BatchEnd,
     ));
     msgs.push((raw_batch_end, batch_end));
@@ -534,7 +542,11 @@ fn test_nft_add_map_element() {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a,
     ];
     let batch_begin = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, NFNL_SUBSYS_NFTABLES as _),
+        NetfilterHeader::new(
+            NetfilterProtoFamily::Unspec,
+            0,
+            NFNL_SUBSYS_NFTABLES as _,
+        ),
         ControlMessage::BatchBegin,
     ));
     msgs.push((raw_batch_begin, batch_begin));
@@ -553,7 +565,7 @@ fn test_nft_add_map_element() {
     ];
 
     let mut set_elem = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::IPv6, 0, 0),
+        NetfilterHeader::new(NetfilterProtoFamily::IPv6, 0, 0),
         NfTablesMessage::NewSetElement(SetElementMessage {
             attributes: vec![
                 SetElementList::Table("foo_table".to_string()),
@@ -584,7 +596,11 @@ fn test_nft_add_map_element() {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a,
     ];
     let batch_end = NetlinkMessage::from(NetfilterMessage::new(
-        NetfilterHeader::new(ProtoFamily::Unspec, 0, NFNL_SUBSYS_NFTABLES as _),
+        NetfilterHeader::new(
+            NetfilterProtoFamily::Unspec,
+            0,
+            NFNL_SUBSYS_NFTABLES as _,
+        ),
         ControlMessage::BatchEnd,
     ));
     msgs.push((raw_batch_end, batch_end));

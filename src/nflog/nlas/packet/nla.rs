@@ -31,6 +31,7 @@ const NFULA_TIMESTAMP: u16 = libc::NFULA_TIMESTAMP as u16;
 const NFULA_UID: u16 = libc::NFULA_UID as u16;
 
 #[derive(Clone, Debug, PartialEq, Eq, From, IsVariant)]
+#[non_exhaustive]
 pub enum PacketNla {
     #[from]
     PacketHdr(PacketHdr),

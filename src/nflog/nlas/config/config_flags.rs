@@ -9,6 +9,7 @@ const NFULA_CFG_FLAGS: u16 = libc::NFULA_CFG_FLAGS as u16;
 
 bitflags! {
     #[derive(Clone, Debug, Copy, PartialEq, Eq)]
+    #[non_exhaustive]
     pub struct ConfigFlags: u16 {
         const SEQ = libc:: NFULNL_CFG_F_SEQ as u16;
         const SEQ_GLOBAL = libc:: NFULNL_CFG_F_SEQ_GLOBAL as u16;

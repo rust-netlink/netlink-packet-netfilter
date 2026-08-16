@@ -12,6 +12,6 @@ pub mod nflog;
 pub mod nftables;
 pub mod none;
 pub use self::message::{
-    NetfilterHeader, NetfilterMessage, NetfilterMessageInner, ProtoFamily,
-    Subsystem,
+    NetfilterHeader, NetfilterMessage, NetfilterMessageInner,
+    NetfilterProtoFamily, NetfilterSubsystem,
 };
