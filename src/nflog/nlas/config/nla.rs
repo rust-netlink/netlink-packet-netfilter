@@ -6,13 +6,14 @@ use netlink_packet_core::{
     ErrorContext, Nla, NlaBuffer, Parseable,
 };
 
-use crate::{
-    constants::{
-        NFULA_CFG_CMD, NFULA_CFG_FLAGS, NFULA_CFG_MODE, NFULA_CFG_NLBUFSIZ,
-        NFULA_CFG_QTHRESH, NFULA_CFG_TIMEOUT,
-    },
-    nflog::nlas::config::{ConfigCmd, ConfigFlags, ConfigMode, Timeout},
-};
+use crate::nflog::nlas::config::{ConfigCmd, ConfigFlags, ConfigMode, Timeout};
+
+const NFULA_CFG_CMD: u16 = libc::NFULA_CFG_CMD as u16;
+const NFULA_CFG_FLAGS: u16 = libc::NFULA_CFG_FLAGS as u16;
+const NFULA_CFG_MODE: u16 = libc::NFULA_CFG_MODE as u16;
+const NFULA_CFG_NLBUFSIZ: u16 = libc::NFULA_CFG_NLBUFSIZ as u16;
+const NFULA_CFG_QTHRESH: u16 = libc::NFULA_CFG_QTHRESH as u16;
+const NFULA_CFG_TIMEOUT: u16 = libc::NFULA_CFG_TIMEOUT as u16;
 
 #[derive(Clone, Debug, PartialEq, Eq, From, IsVariant)]
 pub enum ConfigNla {

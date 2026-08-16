@@ -5,17 +5,17 @@ use netlink_packet_core::{
     Nla, NlaBuffer, Parseable,
 };
 
-pub const IPPROTO_ICMP: u8 = 1;
-pub const IPPROTO_IGMP: u8 = 2;
-pub const IPPROTO_TCP: u8 = 6;
-pub const IPPROTO_UDP: u8 = 17;
-pub const IPPROTO_DCCP: u8 = 33;
-pub const IPPROTO_GRE: u8 = 47;
-pub const IPPROTO_IPV6_ICMP: u8 = 58;
-pub const IPPROTO_IPIP: u8 = 94;
-pub const IPPROTO_L2TP: u8 = 115;
-pub const IPPROTO_SCTP: u8 = 132;
-pub const IPPROTO_UDPLITE: u8 = 136;
+const IPPROTO_ICMP: u8 = 1;
+const IPPROTO_IGMP: u8 = 2;
+const IPPROTO_TCP: u8 = 6;
+const IPPROTO_UDP: u8 = 17;
+const IPPROTO_DCCP: u8 = 33;
+const IPPROTO_GRE: u8 = 47;
+const IPPROTO_IPV6_ICMP: u8 = 58;
+const IPPROTO_IPIP: u8 = 94;
+const IPPROTO_L2TP: u8 = 115;
+const IPPROTO_SCTP: u8 = 132;
+const IPPROTO_UDPLITE: u8 = 136;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]

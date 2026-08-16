@@ -8,17 +8,27 @@ use netlink_packet_core::{
     DefaultNla, ErrorContext, Nla, NlaBuffer, Parseable,
 };
 
-use crate::{
-    constants::{
-        NFULA_GID, NFULA_HWADDR, NFULA_HWHEADER, NFULA_HWLEN, NFULA_HWTYPE,
-        NFULA_IFINDEX_INDEV, NFULA_IFINDEX_OUTDEV, NFULA_IFINDEX_PHYSINDEV,
-        NFULA_IFINDEX_PHYSOUTDEV, NFULA_MARK, NFULA_PACKET_HDR, NFULA_PAYLOAD,
-        NFULA_PREFIX, NFULA_SEQ, NFULA_SEQ_GLOBAL, NFULA_TIMESTAMP, NFULA_UID,
-    },
-    nflog::nlas::packet::{
-        hw_addr::HwAddr, packet_hdr::PacketHdr, timestamp::TimeStamp,
-    },
+use crate::nflog::nlas::packet::{
+    hw_addr::HwAddr, packet_hdr::PacketHdr, timestamp::TimeStamp,
 };
+
+const NFULA_GID: u16 = libc::NFULA_GID as u16;
+const NFULA_HWADDR: u16 = libc::NFULA_HWADDR as u16;
+const NFULA_HWHEADER: u16 = libc::NFULA_HWHEADER as u16;
+const NFULA_HWLEN: u16 = libc::NFULA_HWLEN as u16;
+const NFULA_HWTYPE: u16 = libc::NFULA_HWTYPE as u16;
+const NFULA_IFINDEX_INDEV: u16 = libc::NFULA_IFINDEX_INDEV as u16;
+const NFULA_IFINDEX_OUTDEV: u16 = libc::NFULA_IFINDEX_OUTDEV as u16;
+const NFULA_IFINDEX_PHYSINDEV: u16 = libc::NFULA_IFINDEX_PHYSINDEV as u16;
+const NFULA_IFINDEX_PHYSOUTDEV: u16 = libc::NFULA_IFINDEX_PHYSOUTDEV as u16;
+const NFULA_MARK: u16 = libc::NFULA_MARK as u16;
+const NFULA_PACKET_HDR: u16 = libc::NFULA_PACKET_HDR as u16;
+const NFULA_PAYLOAD: u16 = libc::NFULA_PAYLOAD as u16;
+const NFULA_PREFIX: u16 = libc::NFULA_PREFIX as u16;
+const NFULA_SEQ: u16 = libc::NFULA_SEQ as u16;
+const NFULA_SEQ_GLOBAL: u16 = libc::NFULA_SEQ_GLOBAL as u16;
+const NFULA_TIMESTAMP: u16 = libc::NFULA_TIMESTAMP as u16;
+const NFULA_UID: u16 = libc::NFULA_UID as u16;
 
 #[derive(Clone, Debug, PartialEq, Eq, From, IsVariant)]
 pub enum PacketNla {

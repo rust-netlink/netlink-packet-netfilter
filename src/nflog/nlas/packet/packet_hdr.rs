@@ -5,7 +5,7 @@ use std::mem::size_of;
 use netlink_packet_core::{DecodeError, Nla};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
-pub const NFULA_PACKET_HDR: u16 = libc::NFULA_PACKET_HDR as u16;
+const NFULA_PACKET_HDR: u16 = libc::NFULA_PACKET_HDR as u16;
 
 #[derive(
     Debug,

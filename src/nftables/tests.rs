@@ -8,7 +8,6 @@ use netlink_packet_core::{
     NLM_F_CREATE, NLM_F_MATCH, NLM_F_REQUEST, NLM_F_ROOT,
 };
 
-use crate::constants::NFNL_SUBSYS_NFTABLES;
 use crate::nftables::attributes::expression::{
     Bitwise, ChecksumFlags, Cmp, Expressions, Immediate, Lookup, Meta, MetaKey,
     Operator, Payload, Register,
@@ -23,6 +22,8 @@ use crate::nftables::set::SetFlags;
 use crate::nftables::set_element::{
     SetElementAttribute, SetElementList, SetElementMessage,
 };
+
+const NFNL_SUBSYS_NFTABLES: u8 = libc::NFNL_SUBSYS_NFTABLES as u8;
 use crate::nftables::table::{TableAttribute, TableFlags};
 use crate::nftables::{
     chain::ChainMessage, r#gen::GenAttribute, set::SetAttribute,

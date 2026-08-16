@@ -5,7 +5,7 @@ use std::mem::size_of;
 use netlink_packet_core::{DecodeError, Nla};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
-use crate::constants::NFULA_HWADDR;
+const NFULA_HWADDR: u16 = libc::NFULA_HWADDR as u16;
 
 #[derive(
     Debug,

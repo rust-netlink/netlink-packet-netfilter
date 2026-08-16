@@ -142,10 +142,10 @@ impl Emitable for NetfilterHeader {
 }
 
 // Defined in Linux kernel: include/uapi/linux/netfilter/nfnetlink.h
-pub const NFNL_SUBSYS_NONE: u8 = 0;
-pub const NFNL_SUBSYS_CTNETLINK: u8 = 1;
-pub const NFNL_SUBSYS_ULOG: u8 = 4;
-pub const NFNL_SUBSYS_NFTABLES: u8 = 10;
+const NFNL_SUBSYS_NONE: u8 = 0;
+const NFNL_SUBSYS_CTNETLINK: u8 = 1;
+const NFNL_SUBSYS_ULOG: u8 = 4;
+const NFNL_SUBSYS_NFTABLES: u8 = 10;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-pub mod constants;
 mod message;
 pub(crate) mod nlas;
 pub use message::{

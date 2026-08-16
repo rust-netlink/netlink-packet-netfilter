@@ -5,7 +5,7 @@ use std::mem::size_of;
 use netlink_packet_core::{DecodeError, Nla};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
-use crate::constants::NFULA_TIMESTAMP;
+const NFULA_TIMESTAMP: u16 = libc::NFULA_TIMESTAMP as u16;
 
 #[derive(
     Debug,
