@@ -1,4 +1,21 @@
 # Changelog
+## [0.3.0] - 2026-08-16
+### Breaking changes
+ - Rename netfilter enums and add non_exhaustive to enum. (c39b553)
+ - Flatten subsystem public API. (bfebd24)
+ - Use zerocopy for buffer parsing. (e49a355)
+ - Removed all public constants. (cf56cca)
+ - Use enums for subsystem and message types. (7f6be02)
+
+### New features
+ - Add bindings of NfTables subsystem. (21ffeff, 95ac829)
+ - conntrack new message type. (591a4b2)
+ - conntrack delete message type and attributes. (5da788e)
+ - feat: conntrack get netlink netfilter message types. (c8e49d2)
+
+### Bug fixes
+ - Skip tests on big-endian platforms. (4f11cfc)
+
 ## [0.2.0] - 2023-07-10
 ### Breaking changes
  - Removed reexport on `nl`, please use `netlink_packet_core`. (a7bfcfd)
