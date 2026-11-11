@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 
+use netlink_packet_core::{append_bytes, EncodeError};
 use netlink_packet_core::{
-    emit_u32_be, parse_string, parse_u32_be, DecodeError, DefaultNla,
+    append_u32_be, parse_string, parse_u32_be, DecodeError, DefaultNla,
     ErrorContext, Nla, NlaBuffer, Parseable,
 };
 
@@ -69,15 +70,6 @@ pub enum VerdictAttribute {
 }
 
 impl Nla for VerdictAttribute {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::Code(_) | Self::ChainId(_) => 4,
-            Self::Chain(chain) => chain.len() + 1,
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_VERDICT_UNSPEC,
@@ -88,24 +80,23 @@ impl Nla for VerdictAttribute {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
-            Self::Code(code) => emit_u32_be(buffer, (*code).into()).unwrap(),
+            Self::Code(code) => append_u32_be(out, (*code).into()),
             Self::Chain(chain) => {
-                buffer[..chain.len()].copy_from_slice(chain.as_bytes());
-                buffer[chain.len()] = 0;
+                append_bytes(out, chain.as_bytes());
+                out.push(0);
             }
-            Self::ChainId(id) => emit_u32_be(buffer, *id).unwrap(),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::ChainId(id) => append_u32_be(out, *id),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
-    for VerdictAttribute
-{
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for VerdictAttribute {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_VERDICT_UNSPEC => Self::Unspecified,

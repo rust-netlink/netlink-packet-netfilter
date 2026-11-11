@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    emit_u32_be, parse_u32_be, DecodeError, DefaultNla, Emitable as _,
-    ErrorContext as _, Nla, NlaBuffer, Parseable, NLA_F_NESTED,
+    append_u32_be, parse_u32_be, DecodeError, DefaultNla, ErrorContext as _,
+    Nla, NlaBuffer, Parseable, NLA_F_NESTED,
 };
 
 use crate::nftables::attributes::{expression::Register, DataAttribute};
+use netlink_packet_core::EncodeError;
 
 const NFTA_BITWISE_UNSPEC: u16 = 0;
 const NFTA_BITWISE_SREG: u16 = 1;
@@ -34,20 +35,6 @@ pub enum Bitwise {
 }
 
 impl Nla for Bitwise {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::SourceRegister(_)
-            | Self::DestinationRegister(_)
-            | Self::SourceRegister2(_) => 4,
-            Self::Mask(data) | Self::Xor(data) | Self::Data(data) => {
-                data.buffer_len()
-            }
-            Self::Length(_) | Self::Op(_) => 4,
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_BITWISE_UNSPEC,
@@ -63,22 +50,19 @@ impl Nla for Bitwise {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
             Self::SourceRegister(reg)
             | Self::DestinationRegister(reg)
-            | Self::SourceRegister2(reg) => {
-                emit_u32_be(buffer, (*reg).into()).unwrap()
-            }
+            | Self::SourceRegister2(reg) => append_u32_be(out, (*reg).into()),
             Self::Mask(data) | Self::Xor(data) | Self::Data(data) => {
-                data.emit(buffer)
+                data.emit(out)?
             }
-            Self::Length(nr) | Self::Op(nr) => {
-                emit_u32_be(buffer, *nr).unwrap()
-            }
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Length(nr) | Self::Op(nr) => append_u32_be(out, *nr),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 
     fn is_nested(&self) -> bool {
@@ -87,8 +71,8 @@ impl Nla for Bitwise {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for Bitwise {
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for Bitwise {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_BITWISE_UNSPEC => Self::Unspecified,
@@ -107,12 +91,12 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for Bitwise {
                     .context("invalid NFTA_BITWISE_LEN value")?,
             ),
             NFTA_BITWISE_MASK => Self::Mask(
-                DataAttribute::parse(&NlaBuffer::new(payload)).context(
+                DataAttribute::parse(&NlaBuffer::new(payload)?).context(
                     format!("invalid NFTA_BITWISE_MASK {:?}", payload),
                 )?,
             ),
             NFTA_BITWISE_XOR => Self::Xor(
-                DataAttribute::parse(&NlaBuffer::new(payload)).context(
+                DataAttribute::parse(&NlaBuffer::new(payload)?).context(
                     format!("invalid NFTA_BITWISE_XOR {:?}", payload),
                 )?,
             ),
@@ -121,7 +105,7 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for Bitwise {
                     .context("invalid NFTA_BITWISE_OP value")?,
             ),
             NFTA_BITWISE_DATA => Self::Data(
-                DataAttribute::parse(&NlaBuffer::new(payload)).context(
+                DataAttribute::parse(&NlaBuffer::new(payload)?).context(
                     format!("invalid NFTA_BITWISE_DATA {:?}", payload),
                 )?,
             ),

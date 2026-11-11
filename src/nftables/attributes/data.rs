@@ -8,6 +8,7 @@ use netlink_packet_core::{
 };
 
 use crate::nftables::attributes::VerdictAttribute;
+use netlink_packet_core::{append_bytes, EncodeError};
 
 const NFTA_DATA_UNSPEC: u16 = 0;
 const NFTA_DATA_VALUE: u16 = 1;
@@ -24,15 +25,6 @@ pub enum DataAttribute {
 }
 
 impl Nla for DataAttribute {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspec => 0,
-            Self::Value(bytes) => bytes.len(),
-            Self::Verdict(attrs) => attrs.as_slice().buffer_len(),
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspec => NFTA_DATA_UNSPEC,
@@ -42,13 +34,14 @@ impl Nla for DataAttribute {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspec => {}
-            Self::Value(bytes) => buffer[..bytes.len()].copy_from_slice(bytes),
-            Self::Verdict(attr) => attr.as_slice().emit(buffer),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Value(bytes) => append_bytes(out, bytes),
+            Self::Verdict(attr) => attr.as_slice().emit(out)?,
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 
     fn is_nested(&self) -> bool {
@@ -56,10 +49,8 @@ impl Nla for DataAttribute {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
-    for DataAttribute
-{
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for DataAttribute {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_DATA_UNSPEC => Self::Unspec,
@@ -67,8 +58,8 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
             NFTA_DATA_VERDICT => {
                 let error_msg = "invalid NFTA_DATA_VERDICT";
                 let mut nlas = vec![];
-                for nla in NlasIterator::new(payload) {
-                    let nla = &nla.context(error_msg)?;
+                for nla in NlasIterator::new(payload)? {
+                    let nla = &nla;
                     let parsed =
                         VerdictAttribute::parse(nla).context(error_msg)?;
                     nlas.push(parsed);

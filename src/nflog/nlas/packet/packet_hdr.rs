@@ -2,6 +2,7 @@
 
 use std::mem::size_of;
 
+use netlink_packet_core::{append_bytes, EncodeError};
 use netlink_packet_core::{DecodeError, Nla};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
@@ -58,16 +59,13 @@ impl From<&PacketHdr> for PacketHdrBuffer {
 }
 
 impl Nla for PacketHdr {
-    fn value_len(&self) -> usize {
-        size_of::<PacketHdrBuffer>()
-    }
-
     fn kind(&self) -> u16 {
         NFULA_PACKET_HDR
     }
 
-    fn emit_value(&self, buf: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         let raw = PacketHdrBuffer::from(self);
-        buf.copy_from_slice(raw.as_bytes());
+        append_bytes(out, raw.as_bytes());
+        Ok(())
     }
 }

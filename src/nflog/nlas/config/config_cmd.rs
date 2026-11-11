@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+use netlink_packet_core::EncodeError;
 use netlink_packet_core::Nla;
 
 const NFULA_CFG_CMD: u16 = libc::NFULA_CFG_CMD as u16;
@@ -47,15 +48,12 @@ impl From<u8> for ConfigCmd {
 }
 
 impl Nla for ConfigCmd {
-    fn value_len(&self) -> usize {
-        1
-    }
-
     fn kind(&self) -> u16 {
         NFULA_CFG_CMD
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
-        buffer[0] = (*self).into();
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
+        out.push((*self).into());
+        Ok(())
     }
 }

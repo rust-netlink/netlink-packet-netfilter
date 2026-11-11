@@ -25,18 +25,18 @@ use crate::{NetfilterHeader, NetfilterMessage, NetfilterProtoFamily};
 const IPV6_TYPE_NFT: u32 = 0x08;
 
 fn __test(mut msg: NetlinkMessage<NetfilterMessage>, raw: Vec<u8>) {
-    let mut buffer = vec![0; msg.buffer_len()];
-    msg.finalize();
-    msg.emit(&mut buffer);
+    let mut buffer = Vec::new();
+    msg.emit(&mut buffer).unwrap();
 
     // Check if the serialization was correct
     assert_eq!(buffer, raw, "Message wasn't correctly serialized: {msg:?}");
 
     // Check if the deserialization was correct
-    assert_eq!(
-        NetlinkMessage::parse(&NetlinkBuffer::new(&raw)).unwrap(),
-        msg,
-    );
+    let parsed =
+        NetlinkMessage::parse(&NetlinkBuffer::new(&raw).unwrap()).unwrap();
+    msg.header.length = parsed.header.length;
+    msg.header.message_type = parsed.header.message_type;
+    assert_eq!(parsed, msg);
 }
 
 // tcpdump capture of nlmon against command `nft list ruleset`
@@ -111,7 +111,8 @@ fn test_nft_list_ruleset() {
     msgs.push((raw_get_flow_table, get_flow_table));
 
     for (raw, mut msg) in msgs {
-        msg.header.flags |= NLM_F_REQUEST; // we only test the messages sent by nft here
+        msg.header.flags |= NLM_F_REQUEST; // we only test the messages sent by
+                                           // nft here
 
         __test(msg, raw);
     }
@@ -522,7 +523,8 @@ fn test_nft_load_examle_file() {
     msgs.push((raw_batch_end, batch_end));
 
     for (seq_nr, (raw, mut msg)) in msgs.into_iter().enumerate() {
-        msg.header.flags |= NLM_F_REQUEST; // we only test the messages sent by nft here
+        msg.header.flags |= NLM_F_REQUEST; // we only test the messages sent by
+                                           // nft here
         msg.header.sequence_number = seq_nr as _;
 
         __test(msg, raw);
@@ -606,7 +608,8 @@ fn test_nft_add_map_element() {
     msgs.push((raw_batch_end, batch_end));
 
     for (seq_nr, (raw, mut msg)) in msgs.into_iter().enumerate() {
-        msg.header.flags |= NLM_F_REQUEST; // we only test the messages sent by nft here
+        msg.header.flags |= NLM_F_REQUEST; // we only test the messages sent by
+                                           // nft here
         msg.header.sequence_number = seq_nr as _;
 
         __test(msg, raw);

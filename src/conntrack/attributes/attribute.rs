@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    emit_u32_be, parse_u32_be, DecodeError, DefaultNla, Emitable, ErrorContext,
-    Nla, NlaBuffer, NlasIterator, Parseable,
+    append_u32_be, parse_u32_be, DecodeError, DefaultNla, ErrorContext, Nla,
+    NlaBuffer, NlasIterator, Parseable,
 };
 
 use crate::conntrack::attributes::{
     protoinfo::ProtoInfo, status::Status, tuple::Tuple,
 };
+use netlink_packet_core::EncodeError;
 
 const CTA_TUPLE_ORIG: u16 = 1;
 const CTA_TUPLE_REPLY: u16 = 2;
@@ -29,24 +30,6 @@ pub enum ConntrackAttribute {
 }
 
 impl Nla for ConntrackAttribute {
-    fn value_len(&self) -> usize {
-        match self {
-            ConntrackAttribute::CtaTupleOrig(attr) => {
-                attr.iter().map(|op| op.buffer_len()).sum()
-            }
-            ConntrackAttribute::CtaTupleReply(attr) => {
-                attr.iter().map(|op| op.buffer_len()).sum()
-            }
-            ConntrackAttribute::CtaProtoInfo(attr) => {
-                attr.iter().map(|op| op.buffer_len()).sum()
-            }
-            ConntrackAttribute::CtaStatus(_) => size_of::<u32>(),
-            ConntrackAttribute::CtaTimeout(attr) => size_of_val(attr),
-            ConntrackAttribute::CtaMark(attr) => size_of_val(attr),
-            ConntrackAttribute::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             ConntrackAttribute::CtaTupleOrig(_) => CTA_TUPLE_ORIG,
@@ -59,40 +42,31 @@ impl Nla for ConntrackAttribute {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             ConntrackAttribute::CtaTupleOrig(attr) => {
-                let mut len = 0;
                 for op in attr {
-                    op.emit(&mut buffer[len..]);
-                    len += op.buffer_len();
+                    op.emit(out)?;
                 }
             }
             ConntrackAttribute::CtaTupleReply(attr) => {
-                let mut len = 0;
                 for op in attr {
-                    op.emit(&mut buffer[len..]);
-                    len += op.buffer_len();
+                    op.emit(out)?;
                 }
             }
             ConntrackAttribute::CtaProtoInfo(attr) => {
-                let mut len = 0;
                 for op in attr {
-                    op.emit(&mut buffer[len..]);
-                    len += op.buffer_len();
+                    op.emit(out)?;
                 }
             }
             ConntrackAttribute::CtaStatus(attr) => {
-                emit_u32_be(buffer, (*attr).bits()).unwrap()
+                append_u32_be(out, (*attr).bits())
             }
-            ConntrackAttribute::CtaTimeout(attr) => {
-                emit_u32_be(buffer, *attr).unwrap()
-            }
-            ConntrackAttribute::CtaMark(attr) => {
-                emit_u32_be(buffer, *attr).unwrap()
-            }
-            ConntrackAttribute::Other(attr) => attr.emit_value(buffer),
+            ConntrackAttribute::CtaTimeout(attr) => append_u32_be(out, *attr),
+            ConntrackAttribute::CtaMark(attr) => append_u32_be(out, *attr),
+            ConntrackAttribute::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
     fn is_nested(&self) -> bool {
         matches!(
@@ -104,26 +78,23 @@ impl Nla for ConntrackAttribute {
     }
 }
 
-impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
-    for ConntrackAttribute
-{
-    fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
+impl<'buffer> Parseable<NlaBuffer<'buffer>> for ConntrackAttribute {
+    fn parse(buf: &NlaBuffer<'buffer>) -> Result<Self, DecodeError> {
         let kind = buf.kind();
         let payload = buf.value();
         let nla = match kind {
             CTA_TUPLE_ORIG => {
                 let mut tuples = Vec::new();
-                for nlas in NlasIterator::new(payload) {
-                    let nlas = &nlas.context("invalid CTA_TUPLE_ORIG value")?;
+                for nlas in NlasIterator::new(payload)? {
+                    let nlas = &nlas;
                     tuples.push(Tuple::parse(nlas)?);
                 }
                 ConntrackAttribute::CtaTupleOrig(tuples)
             }
             CTA_TUPLE_REPLY => {
                 let mut tuples = Vec::new();
-                for nlas in NlasIterator::new(payload) {
-                    let nlas =
-                        &nlas.context("invalid CTA_TUPLE_REPLY value")?;
+                for nlas in NlasIterator::new(payload)? {
+                    let nlas = &nlas;
 
                     tuples.push(Tuple::parse(nlas)?);
                 }
@@ -131,8 +102,8 @@ impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
             }
             CTA_PROTOINFO => {
                 let mut proto_infos = Vec::new();
-                for nlas in NlasIterator::new(payload) {
-                    let nlas = &nlas.context("invalid CTA_PROTOINFO value")?;
+                for nlas in NlasIterator::new(payload)? {
+                    let nlas = &nlas;
                     proto_infos.push(ProtoInfo::parse(nlas)?);
                 }
                 ConntrackAttribute::CtaProtoInfo(proto_infos)

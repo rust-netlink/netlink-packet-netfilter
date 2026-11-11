@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    emit_u32_be, emit_u64_be, parse_string, parse_u32_be, parse_u64_be,
+    append_u32_be, append_u64_be, parse_string, parse_u32_be, parse_u64_be,
     DecodeError, DefaultNla, Emitable, ErrorContext as _, Nla, NlaBuffer,
     NlasIterator, Parseable, ParseableParametrized, NLA_F_NESTED,
 };
 
 use crate::nftables::chain::{hook::HookType, ChainFlags, Hook};
+use netlink_packet_core::{append_bytes, EncodeError};
 
 const NFTA_CHAIN_UNSPEC: u16 = 0;
 const NFTA_CHAIN_TABLE: u16 = 1;
@@ -51,21 +52,6 @@ pub enum ChainAttribute {
 }
 
 impl Nla for ChainAttribute {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::Table(string) | Self::Name(string) | Self::Type(string) => {
-                string.len() + 1
-            }
-            Self::Handle(_) => 8,
-            Self::Hook(attrs) => attrs.as_slice().buffer_len(),
-            Self::Policy(_) | Self::Use(_) | Self::Flags(_) | Self::Id(_) => 4,
-            Self::Counter(attrs) => attrs.as_slice().buffer_len(),
-            Self::UserData(bytes) => bytes.len(),
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_CHAIN_UNSPEC,
@@ -84,25 +70,24 @@ impl Nla for ChainAttribute {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
             Self::Table(string) | Self::Name(string) | Self::Type(string) => {
-                buffer[..string.len()].copy_from_slice(string.as_bytes());
-                buffer[string.len()] = 0;
+                append_bytes(out, string.as_bytes());
+                out.push(0);
             }
-            Self::Handle(value) => emit_u64_be(buffer, *value).unwrap(),
-            Self::Hook(attrs) => attrs.as_slice().emit(buffer),
+            Self::Handle(value) => append_u64_be(out, *value),
+            Self::Hook(attrs) => attrs.as_slice().emit(out)?,
             Self::Policy(value) | Self::Use(value) | Self::Id(value) => {
-                emit_u32_be(buffer, *value).unwrap()
+                append_u32_be(out, *value)
             }
-            Self::Flags(flags) => emit_u32_be(buffer, flags.bits()).unwrap(),
-            Self::Counter(attrs) => attrs.as_slice().emit(buffer),
-            Self::UserData(bytes) => {
-                buffer[..bytes.len()].copy_from_slice(bytes.as_slice())
-            }
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Flags(flags) => append_u32_be(out, flags.bits()),
+            Self::Counter(attrs) => attrs.as_slice().emit(out)?,
+            Self::UserData(bytes) => append_bytes(out, bytes.as_slice()),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 
     fn is_nested(&self) -> bool {
@@ -111,10 +96,8 @@ impl Nla for ChainAttribute {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
-    for ChainAttribute
-{
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for ChainAttribute {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_CHAIN_UNSPEC => Self::Unspecified,
@@ -133,11 +116,7 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
             NFTA_CHAIN_HOOK => {
                 let mut nlas = vec![];
                 let mut hook_type = HookType::default();
-                for nla in NlasIterator::new(payload) {
-                    let nla = nla.context(format!(
-                        "invalid NFTA_CHAIN_HOOK payload {:?}",
-                        payload
-                    ))?;
+                for nla in NlasIterator::new(payload)? {
                     let hook = Hook::parse_with_param(&nla, hook_type)?;
                     match hook {
                         Hook::NetDeviceName(_) | Hook::NetDevices(_) => {
@@ -163,11 +142,7 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
             ),
             NFTA_CHAIN_COUNTERS => {
                 let mut nlas = vec![];
-                for nla in NlasIterator::new(payload) {
-                    let nla = nla.context(format!(
-                        "invalid NFTA_CHAIN_COUNTERS payload {:?}",
-                        payload
-                    ))?;
+                for nla in NlasIterator::new(payload)? {
                     nlas.push(DefaultNla::parse(&nla)?);
                 }
                 Self::Counter(nlas)

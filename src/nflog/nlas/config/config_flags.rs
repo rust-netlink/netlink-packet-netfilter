@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-use std::mem::size_of;
-
 use bitflags::bitflags;
-use netlink_packet_core::{emit_u16_be, Nla};
+use netlink_packet_core::EncodeError;
+use netlink_packet_core::{append_u16_be, Nla};
 
 const NFULA_CFG_FLAGS: u16 = libc::NFULA_CFG_FLAGS as u16;
 
@@ -25,15 +24,12 @@ impl ConfigFlags {
 }
 
 impl Nla for ConfigFlags {
-    fn value_len(&self) -> usize {
-        size_of::<Self>()
-    }
-
     fn kind(&self) -> u16 {
         NFULA_CFG_FLAGS
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
-        emit_u16_be(buffer, self.bits()).unwrap();
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
+        append_u16_be(out, self.bits());
+        Ok(())
     }
 }
