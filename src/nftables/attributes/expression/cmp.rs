@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    emit_u32_be, parse_u32_be, DecodeError, DefaultNla, Emitable as _,
-    ErrorContext as _, Nla, NlaBuffer, Parseable, NLA_F_NESTED,
+    append_u32_be, parse_u32_be, DecodeError, DefaultNla, ErrorContext as _,
+    Nla, NlaBuffer, Parseable, NLA_F_NESTED,
 };
 
 use crate::nftables::attributes::{expression::Register, DataAttribute};
+use netlink_packet_core::EncodeError;
 
 /**
  * enum nft_cmp_ops - nf_tables relational operator
@@ -83,15 +84,6 @@ pub enum Cmp {
 }
 
 impl Nla for Cmp {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::SourceRegister(_) | Self::Op(_) => 4,
-            Self::Data(data) => data.buffer_len(),
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_CMP_UNSPEC,
@@ -102,16 +94,15 @@ impl Nla for Cmp {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
-            Self::SourceRegister(reg) => {
-                emit_u32_be(buffer, (*reg).into()).unwrap()
-            }
-            Self::Op(value) => emit_u32_be(buffer, (*value).into()).unwrap(),
-            Self::Data(data) => data.emit(buffer),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::SourceRegister(reg) => append_u32_be(out, (*reg).into()),
+            Self::Op(value) => append_u32_be(out, (*value).into()),
+            Self::Data(data) => data.emit(out)?,
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 
     fn is_nested(&self) -> bool {
@@ -119,8 +110,8 @@ impl Nla for Cmp {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for Cmp {
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for Cmp {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_CMP_UNSPEC => Self::Unspecified,
@@ -135,7 +126,7 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for Cmp {
                     .into(),
             ),
             NFTA_CMP_DATA => Self::Data(
-                DataAttribute::parse(&NlaBuffer::new(payload))
+                DataAttribute::parse(&NlaBuffer::new(payload)?)
                     .context(format!("invalid NFTA_CMP_DATA {:?}", payload))?,
             ),
             _ => Self::Other(DefaultNla::parse(buf)?),

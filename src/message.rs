@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    DecodeError, DefaultNla, Emitable, ErrorContext, NetlinkDeserializable,
-    NetlinkHeader, NetlinkPayload, NetlinkSerializable, ParseableParametrized,
+    append_bytes, DecodeError, DefaultNla, Emitable, EncodeError, ErrorContext,
+    NetlinkDeserializable, NetlinkHeader, NetlinkMessagePayload,
+    NetlinkPayload, ParseableParametrized,
 };
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
@@ -132,13 +133,10 @@ impl From<&NetfilterHeader> for NetfilterHeaderBuffer {
 }
 
 impl Emitable for NetfilterHeader {
-    fn buffer_len(&self) -> usize {
-        NETFILTER_HEADER_LEN
-    }
-
-    fn emit(&self, buf: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         let raw = NetfilterHeaderBuffer::from(self);
-        buf[..NETFILTER_HEADER_LEN].copy_from_slice(raw.as_bytes());
+        append_bytes(out, raw.as_bytes());
+        Ok(())
     }
 }
 
@@ -221,28 +219,17 @@ impl From<ControlMessage> for NetfilterMessageInner {
 }
 
 impl Emitable for NetfilterMessageInner {
-    fn buffer_len(&self) -> usize {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
-            NetfilterMessageInner::None(message) => message.buffer_len(),
-            NetfilterMessageInner::ULog(message) => message.buffer_len(),
-            NetfilterMessageInner::Conntrack(message) => message.buffer_len(),
-            NetfilterMessageInner::NfTables(message) => message.buffer_len(),
+            NetfilterMessageInner::None(message) => message.emit(out)?,
+            NetfilterMessageInner::ULog(message) => message.emit(out)?,
+            NetfilterMessageInner::Conntrack(message) => message.emit(out)?,
+            NetfilterMessageInner::NfTables(message) => message.emit(out)?,
             NetfilterMessageInner::Other { attributes, .. } => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
         }
-    }
-
-    fn emit(&self, buffer: &mut [u8]) {
-        match self {
-            NetfilterMessageInner::None(message) => message.emit(buffer),
-            NetfilterMessageInner::ULog(message) => message.emit(buffer),
-            NetfilterMessageInner::Conntrack(message) => message.emit(buffer),
-            NetfilterMessageInner::NfTables(message) => message.emit(buffer),
-            NetfilterMessageInner::Other { attributes, .. } => {
-                attributes.as_slice().emit(buffer)
-            }
-        }
+        Ok(())
     }
 }
 
@@ -348,36 +335,23 @@ impl ParseableParametrized<[u8], u16> for NetfilterMessage {
 }
 
 impl Emitable for NetfilterMessage {
-    fn buffer_len(&self) -> usize {
-        self.header.buffer_len() + self.inner.buffer_len()
-    }
-
-    fn emit(&self, buffer: &mut [u8]) {
-        self.header.emit(buffer);
-        self.inner.emit(&mut buffer[self.header.buffer_len()..]);
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
+        self.header.emit(out)?;
+        self.inner.emit(out)
     }
 }
 
-impl NetlinkSerializable for NetfilterMessage {
+impl NetlinkMessagePayload for NetfilterMessage {
     fn message_type(&self) -> u16 {
         ((u8::from(self.subsys()) as u16) << 8) | self.message_type() as u16
-    }
-
-    fn buffer_len(&self) -> usize {
-        <Self as Emitable>::buffer_len(self)
-    }
-
-    fn serialize(&self, buffer: &mut [u8]) {
-        self.emit(buffer)
     }
 }
 
 impl NetlinkDeserializable for NetfilterMessage {
-    type Error = DecodeError;
     fn deserialize(
         header: &NetlinkHeader,
         payload: &[u8],
-    ) -> Result<Self, Self::Error> {
+    ) -> Result<Self, DecodeError> {
         NetfilterMessage::parse_with_param(payload, header.message_type)
     }
 }

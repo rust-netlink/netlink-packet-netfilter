@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    DecodeError, DefaultNla, Emitable, ErrorContext, Nla, NlaBuffer,
-    NlasIterator, Parseable,
+    DecodeError, DefaultNla, Nla, NlaBuffer, NlasIterator, Parseable,
 };
 
 use crate::conntrack::attributes::{iptuple::IPTuple, prototuple::ProtoTuple};
+use netlink_packet_core::EncodeError;
 
 const CTA_TUPLE_IP: u16 = 1;
 const CTA_TUPLE_PROTO: u16 = 2;
@@ -19,14 +19,6 @@ pub enum Tuple {
 }
 
 impl Nla for Tuple {
-    fn value_len(&self) -> usize {
-        match self {
-            Tuple::Ip(nlas) => nlas.iter().map(|op| op.buffer_len()).sum(),
-            Tuple::Proto(nlas) => nlas.iter().map(|op| op.buffer_len()).sum(),
-            Tuple::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Tuple::Ip(_) => CTA_TUPLE_IP,
@@ -34,49 +26,43 @@ impl Nla for Tuple {
             Tuple::Other(attr) => attr.kind(),
         }
     }
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Tuple::Ip(nlas) => {
-                let mut len = 0;
                 for op in nlas {
-                    op.emit(&mut buffer[len..]);
-                    len += op.buffer_len();
+                    op.emit(out)?;
                 }
             }
             Tuple::Proto(nlas) => {
-                let mut len = 0;
                 for op in nlas {
-                    op.emit(&mut buffer[len..]);
-                    len += op.buffer_len();
+                    op.emit(out)?;
                 }
             }
-            Tuple::Other(attr) => attr.emit_value(buffer),
+            Tuple::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
     fn is_nested(&self) -> bool {
         matches!(self, Tuple::Ip(_) | Tuple::Proto(_))
     }
 }
-impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
-    for Tuple
-{
-    fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
+impl<'buffer> Parseable<NlaBuffer<'buffer>> for Tuple {
+    fn parse(buf: &NlaBuffer<'buffer>) -> Result<Self, DecodeError> {
         let kind = buf.kind();
         let payload = buf.value();
         let nla = match kind {
             CTA_TUPLE_IP => {
                 let mut ip_tuples = Vec::new();
-                for nlas in NlasIterator::new(payload) {
-                    let nlas = &nlas.context("invalid CTA_TUPLE_IP value")?;
+                for nlas in NlasIterator::new(payload)? {
+                    let nlas = &nlas;
                     ip_tuples.push(IPTuple::parse(nlas)?);
                 }
                 Tuple::Ip(ip_tuples)
             }
             CTA_TUPLE_PROTO => {
                 let mut proto_tuples = Vec::new();
-                for nlas in NlasIterator::new(payload) {
-                    let nlas =
-                        &nlas.context("invalid CTA_TUPLE_PROTO value")?;
+                for nlas in NlasIterator::new(payload)? {
+                    let nlas = &nlas;
                     proto_tuples.push(ProtoTuple::parse(nlas)?);
                 }
                 Tuple::Proto(proto_tuples)

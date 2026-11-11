@@ -24,8 +24,8 @@ fn test_dump_conntrack() {
         ConntrackMessage::Get(vec![]),
     );
 
-    let mut buffer = vec![0; expected.buffer_len()];
-    expected.emit(&mut buffer);
+    let mut buffer = Vec::new();
+    expected.emit(&mut buffer).unwrap();
 
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
@@ -88,8 +88,8 @@ fn test_get_conntrack_tcp_ipv4() {
         ConntrackMessage::Get(attributes),
     );
 
-    let mut buffer = vec![0; expected.buffer_len()];
-    expected.emit(&mut buffer);
+    let mut buffer = Vec::new();
+    expected.emit(&mut buffer).unwrap();
 
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
@@ -142,8 +142,8 @@ fn test_get_conntrack_udp_ipv6() {
         ConntrackMessage::Get(attributes),
     );
 
-    let mut buffer = vec![0; expected.buffer_len()];
-    expected.emit(&mut buffer);
+    let mut buffer = Vec::new();
+    expected.emit(&mut buffer).unwrap();
 
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
@@ -245,8 +245,8 @@ fn test_delete_conntrack_tcp_ipv4() {
         ConntrackMessage::Delete(attributes),
     );
 
-    let mut buffer = vec![0; expected.buffer_len()];
-    expected.emit(&mut buffer);
+    let mut buffer = Vec::new();
+    expected.emit(&mut buffer).unwrap();
 
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
@@ -340,8 +340,8 @@ fn test_delete_conntrack_udp_ipv6() {
         ConntrackMessage::Delete(attributes),
     );
 
-    let mut buffer = vec![0; expected.buffer_len()];
-    expected.emit(&mut buffer);
+    let mut buffer = Vec::new();
+    expected.emit(&mut buffer).unwrap();
 
     // Check if the serialization was correct
     assert_eq!(buffer, raw);
@@ -432,8 +432,8 @@ fn test_new_conntrack() {
         ConntrackMessage::New(attributes),
     );
 
-    let mut buffer = vec![0; expected.buffer_len()];
-    expected.emit(&mut buffer);
+    let mut buffer = Vec::new();
+    expected.emit(&mut buffer).unwrap();
 
     // Check if the serialization was correct
     assert_eq!(buffer, raw);

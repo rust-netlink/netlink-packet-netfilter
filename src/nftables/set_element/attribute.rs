@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    emit_u32_be, emit_u64_be, parse_string, parse_u32_be, parse_u64_be,
+    append_u32_be, append_u64_be, parse_string, parse_u32_be, parse_u64_be,
     DecodeError, DefaultNla, Emitable, ErrorContext as _, Nla, NlaBuffer,
     NlasIterator, Parseable, ParseableParametrized as _, NLA_F_NESTED,
 };
@@ -13,6 +13,7 @@ use crate::nftables::{
     },
     set_element::SetElementFlags,
 };
+use netlink_packet_core::{append_bytes, EncodeError};
 
 // Defined in Linux kernel: include/uapi/linux/netfilter/nf_tables.h
 const NFTA_SET_ELEM_UNSPEC: u16 = 0;
@@ -53,21 +54,6 @@ pub enum SetElementAttribute {
 }
 
 impl Nla for SetElementAttribute {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::Key(data) | Self::Data(data) => data.buffer_len(),
-            Self::Flags(_) => 4,
-            Self::Timeout(_) | Self::Expiration(_) => 8,
-            Self::UserData(bytes) => bytes.len(),
-            Self::Expression(ex) => ex.buffer_len(),
-            Self::ListExpressions(exs) => exs.as_slice().buffer_len(),
-            Self::ObjectRefrence(string) => string.len() + 1,
-            Self::KeyEnd(attr) => attr.as_slice().buffer_len(),
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_SET_ELEM_UNSPEC,
@@ -87,26 +73,25 @@ impl Nla for SetElementAttribute {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
-            Self::Key(data) | Self::Data(data) => data.emit(buffer),
-            Self::Flags(bits) => emit_u32_be(buffer, bits.bits()).unwrap(),
+            Self::Key(data) | Self::Data(data) => data.emit(out)?,
+            Self::Flags(bits) => append_u32_be(out, bits.bits()),
             Self::Timeout(value) | Self::Expiration(value) => {
-                emit_u64_be(buffer, *value).unwrap()
+                append_u64_be(out, *value)
             }
-            Self::UserData(bytes) => {
-                buffer[..bytes.len()].copy_from_slice(bytes.as_slice())
-            }
-            Self::Expression(ex) => ex.emit(buffer),
-            Self::KeyEnd(attr) => attr.as_slice().emit(buffer),
-            Self::ListExpressions(exs) => exs.as_slice().emit(buffer),
+            Self::UserData(bytes) => append_bytes(out, bytes.as_slice()),
+            Self::Expression(ex) => ex.emit(out)?,
+            Self::KeyEnd(attr) => attr.as_slice().emit(out)?,
+            Self::ListExpressions(exs) => exs.as_slice().emit(out)?,
             Self::ObjectRefrence(string) => {
-                buffer[..string.len()].copy_from_slice(string.as_bytes());
-                buffer[string.len()] = 0;
+                append_bytes(out, string.as_bytes());
+                out.push(0);
             }
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 
     fn is_nested(&self) -> bool {
@@ -121,19 +106,17 @@ impl Nla for SetElementAttribute {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
-    for SetElementAttribute
-{
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for SetElementAttribute {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_SET_ELEM_UNSPEC => Self::Unspecified,
             NFTA_SET_ELEM_KEY => Self::Key(
-                DataAttribute::parse(&NlaBuffer::new(payload))
+                DataAttribute::parse(&NlaBuffer::new(payload)?)
                     .context("invalid NFTA_SET_ELEM_KEY value")?,
             ),
             NFTA_SET_ELEM_DATA => Self::Data(
-                DataAttribute::parse(&NlaBuffer::new(payload))
+                DataAttribute::parse(&NlaBuffer::new(payload)?)
                     .context("invalid NFTA_SET_ELEM_DATA value")?,
             ),
             NFTA_SET_ELEM_FLAGS => {
@@ -153,7 +136,7 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
             NFTA_SET_ELEM_USERDATA => Self::UserData(payload.to_vec()),
             NFTA_SET_ELEM_EXPR => Self::Expression(
                 ExpressionAttribute::parse_with_param(
-                    &NlaBuffer::new(payload),
+                    &NlaBuffer::new(payload)?,
                     None, /* FIXME: Figure out how the legacy behavior
                            * determined the name */
                 )
@@ -165,11 +148,7 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
             ),
             NFTA_SET_ELEM_KEY_END => {
                 let mut nlas = vec![];
-                for nla in NlasIterator::new(payload) {
-                    let nla = nla.context(format!(
-                        "invalid NFTA_SET_ELEM_KEY_END {:?}",
-                        payload
-                    ))?;
+                for nla in NlasIterator::new(payload)? {
                     nlas.push(DefaultNla::parse(&nla)?);
                 }
                 Self::KeyEnd(nlas)

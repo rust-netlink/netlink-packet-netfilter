@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+use netlink_packet_core::{append_bytes, EncodeError};
 use netlink_packet_core::{
     parse_ip, DecodeError, DefaultNla, ErrorContext, Nla, NlaBuffer, Parseable,
 };
@@ -18,36 +19,19 @@ pub enum IPTuple {
     Other(DefaultNla),
 }
 
-const IPV4_LEN: usize = 4;
-const IPV6_LEN: usize = 16;
-
 // Helper function needed for implementing the Nla trait
-pub fn emit_ip(addr: &IpAddr, buf: &mut [u8]) {
+pub fn emit_ip(addr: &IpAddr, out: &mut Vec<u8>) {
     match addr {
         IpAddr::V4(ip) => {
-            buf[..IPV4_LEN].copy_from_slice(ip.octets().as_slice());
+            append_bytes(out, ip.octets().as_slice());
         }
         IpAddr::V6(ip) => {
-            buf[..IPV6_LEN].copy_from_slice(ip.octets().as_slice());
+            append_bytes(out, ip.octets().as_slice());
         }
     }
 }
 
 impl Nla for IPTuple {
-    fn value_len(&self) -> usize {
-        match self {
-            IPTuple::SourceAddress(attr) => match *attr {
-                IpAddr::V4(_) => IPV4_LEN,
-                IpAddr::V6(_) => IPV6_LEN,
-            },
-            IPTuple::DestinationAddress(attr) => match *attr {
-                IpAddr::V4(_) => IPV4_LEN,
-                IpAddr::V6(_) => IPV6_LEN,
-            },
-            IPTuple::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             IPTuple::SourceAddress(attr) => match *attr {
@@ -62,18 +46,17 @@ impl Nla for IPTuple {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
-            IPTuple::SourceAddress(attr) => emit_ip(attr, buffer),
-            IPTuple::DestinationAddress(attr) => emit_ip(attr, buffer),
-            IPTuple::Other(attr) => attr.emit_value(buffer),
+            IPTuple::SourceAddress(attr) => emit_ip(attr, out),
+            IPTuple::DestinationAddress(attr) => emit_ip(attr, out),
+            IPTuple::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
-impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
-    for IPTuple
-{
-    fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
+impl<'buffer> Parseable<NlaBuffer<'buffer>> for IPTuple {
+    fn parse(buf: &NlaBuffer<'buffer>) -> Result<Self, DecodeError> {
         let kind = buf.kind();
         let payload = buf.value();
         let nla = match kind {

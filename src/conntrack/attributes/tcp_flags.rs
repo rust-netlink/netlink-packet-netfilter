@@ -2,6 +2,7 @@
 
 use std::mem::size_of;
 
+use netlink_packet_core::{append_bytes, EncodeError};
 use netlink_packet_core::{DecodeError, Emitable};
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
 
@@ -55,12 +56,9 @@ impl From<&TCPFlags> for TCPFlagsBuffer {
 }
 
 impl Emitable for TCPFlags {
-    fn buffer_len(&self) -> usize {
-        size_of::<TCPFlagsBuffer>()
-    }
-
-    fn emit(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         let raw = TCPFlagsBuffer::from(self);
-        buffer.copy_from_slice(raw.as_bytes());
+        append_bytes(out, raw.as_bytes());
+        Ok(())
     }
 }

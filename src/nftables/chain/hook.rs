@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
+use netlink_packet_core::{append_bytes, EncodeError};
 use netlink_packet_core::{
-    emit_u32_be, parse_string, parse_u32_be, DecodeError, DefaultNla, Emitable,
-    ErrorContext as _, Nla, NlaBuffer, NlasIterator, Parseable,
+    append_u32_be, parse_string, parse_u32_be, DecodeError, DefaultNla,
+    Emitable, ErrorContext as _, Nla, NlaBuffer, NlasIterator, Parseable,
     ParseableParametrized, NLA_F_NESTED,
 };
 
@@ -140,16 +141,6 @@ pub enum Hook {
 }
 
 impl Nla for Hook {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::Number(_) | Self::Priority(_) => 4,
-            Self::NetDeviceName(string) => string.len() + 1,
-            Self::NetDevices(devs) => devs.as_slice().buffer_len(),
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_HOOK_UNSPEC,
@@ -161,20 +152,19 @@ impl Nla for Hook {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
-            Self::Number(value) => {
-                emit_u32_be(buffer, (*value).into()).unwrap()
-            }
-            Self::Priority(value) => emit_u32_be(buffer, *value).unwrap(),
+            Self::Number(value) => append_u32_be(out, (*value).into()),
+            Self::Priority(value) => append_u32_be(out, *value),
             Self::NetDeviceName(string) => {
-                buffer[..string.len()].copy_from_slice(string.as_bytes());
-                buffer[string.len()] = 0;
+                append_bytes(out, string.as_bytes());
+                out.push(0);
             }
-            Self::NetDevices(attrs) => attrs.as_slice().emit(buffer),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::NetDevices(attrs) => attrs.as_slice().emit(out)?,
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 
     fn is_nested(&self) -> bool {
@@ -182,11 +172,9 @@ impl Nla for Hook {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized>
-    ParseableParametrized<NlaBuffer<&'a T>, HookType> for Hook
-{
+impl<'a> ParseableParametrized<NlaBuffer<'a>, HookType> for Hook {
     fn parse_with_param(
-        buf: &NlaBuffer<&'a T>,
+        buf: &NlaBuffer<'a>,
         hook_type: HookType,
     ) -> Result<Self, DecodeError> {
         let payload = buf.value();
@@ -210,11 +198,7 @@ impl<'a, T: AsRef<[u8]> + ?Sized>
             ),
             NFTA_HOOK_DEVS => {
                 let mut nlas = vec![];
-                for nla in NlasIterator::new(payload) {
-                    let nla = nla.context(format!(
-                        "invalid NFTA_HOOK_DEVS payload {:?}",
-                        payload
-                    ))?;
+                for nla in NlasIterator::new(payload)? {
                     nlas.push(DefaultNla::parse(&nla)?);
                 }
                 Self::NetDevices(nlas)

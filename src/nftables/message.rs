@@ -6,6 +6,7 @@ use crate::nftables::{
 };
 use crate::nlas::default_nlas;
 
+use netlink_packet_core::EncodeError;
 use netlink_packet_core::{
     DecodeError, DefaultNla, Emitable, ErrorContext as _, Parseable,
     ParseableParametrized,
@@ -208,164 +209,85 @@ impl NfTablesMessage {
 }
 
 impl Emitable for NfTablesMessage {
-    fn buffer_len(&self) -> usize {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             NfTablesMessage::NewTable(TableMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::GetTable(TableMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::DeleteTable(TableMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::NewChain(ChainMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::GetChain(ChainMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::DeleteChain(ChainMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::NewRule(RuleMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::GetRule(RuleMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::DeleteRule(RuleMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::NewSet(SetMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::GetSet(SetMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::DeleteSet(SetMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::NewSetElement(SetElementMessage {
                 attributes,
-            }) => attributes.as_slice().buffer_len(),
+            }) => attributes.as_slice().emit(out)?,
             NfTablesMessage::GetSetElement(SetElementMessage {
                 attributes,
-            }) => attributes.as_slice().buffer_len(),
+            }) => attributes.as_slice().emit(out)?,
             NfTablesMessage::DeleteSetElement(SetElementMessage {
                 attributes,
-            }) => attributes.as_slice().buffer_len(),
+            }) => attributes.as_slice().emit(out)?,
             NfTablesMessage::NewGen(GenMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::GetGen(GenMessage { attributes }) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::Trace(attributes) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::NewObject(attributes) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::GetObject(attributes) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::DeleteObject(attributes) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::NewFlowTable(attributes) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::GetFlowTable(attributes) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::DeleteFlowTable(attributes) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             NfTablesMessage::Other { attributes, .. } => {
-                attributes.as_slice().buffer_len()
-            }
-        }
-    }
-
-    fn emit(&self, buffer: &mut [u8]) {
-        match self {
-            NfTablesMessage::NewTable(TableMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::GetTable(TableMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::DeleteTable(TableMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::NewChain(ChainMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::GetChain(ChainMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::DeleteChain(ChainMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::NewRule(RuleMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::GetRule(RuleMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::DeleteRule(RuleMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::NewSet(SetMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::GetSet(SetMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::DeleteSet(SetMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::NewSetElement(SetElementMessage {
-                attributes,
-            }) => attributes.as_slice().emit(buffer),
-            NfTablesMessage::GetSetElement(SetElementMessage {
-                attributes,
-            }) => attributes.as_slice().emit(buffer),
-            NfTablesMessage::DeleteSetElement(SetElementMessage {
-                attributes,
-            }) => attributes.as_slice().emit(buffer),
-            NfTablesMessage::NewGen(GenMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::GetGen(GenMessage { attributes }) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::Trace(attributes) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::NewObject(attributes) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::GetObject(attributes) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::DeleteObject(attributes) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::NewFlowTable(attributes) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::GetFlowTable(attributes) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::DeleteFlowTable(attributes) => {
-                attributes.as_slice().emit(buffer)
-            }
-            NfTablesMessage::Other { attributes, .. } => {
-                attributes.as_slice().emit(buffer)
+                attributes.as_slice().emit(out)?
             }
         };
+        Ok(())
     }
 }
 
