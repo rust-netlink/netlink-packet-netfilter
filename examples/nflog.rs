@@ -8,6 +8,7 @@
 
 use std::time::Duration;
 
+use libc::NETLINK_NETFILTER;
 use netlink_packet_core::{parse_ip, Emitable, NetlinkMessage, NetlinkPayload};
 use netlink_packet_netfilter::{
     nflog::{
@@ -16,7 +17,7 @@ use netlink_packet_netfilter::{
     },
     NetfilterMessage, NetfilterMessageInner, NetfilterProtoFamily,
 };
-use netlink_sys::{constants::NETLINK_NETFILTER, Socket};
+use netlink_sys::Socket;
 
 fn get_packet_nlas(message: &NetlinkMessage<NetfilterMessage>) -> &[PacketNla] {
     if let NetlinkPayload::InnerMessage(NetfilterMessage {
@@ -34,7 +35,7 @@ fn main() {
     let mut receive_buffer = vec![0; 4096];
 
     // First, we bind the socket
-    let mut socket = Socket::new(NETLINK_NETFILTER).unwrap();
+    let socket = Socket::new(NETLINK_NETFILTER as isize).unwrap();
     socket.bind_auto().unwrap();
 
     // Then we issue the PfBind command

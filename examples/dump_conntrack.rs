@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+use libc::NETLINK_NETFILTER;
 use netlink_packet_core::{
     Emitable, NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_DUMP,
     NLM_F_REQUEST,
@@ -8,10 +9,10 @@ use netlink_packet_netfilter::{
     conntrack::ConntrackMessage, NetfilterHeader, NetfilterMessage,
     NetfilterProtoFamily,
 };
-use netlink_sys::{protocols::NETLINK_NETFILTER, Socket, SocketAddr};
+use netlink_sys::{Socket, SocketAddr};
 
 fn main() {
-    let mut socket = Socket::new(NETLINK_NETFILTER).unwrap();
+    let socket = Socket::new(NETLINK_NETFILTER as isize).unwrap();
     let _port_number = socket.bind_auto().unwrap().port_number();
     socket.connect(&SocketAddr::new(0, 0)).unwrap();
 
