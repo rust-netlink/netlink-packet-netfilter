@@ -15,9 +15,11 @@ mod table;
 
 pub use self::{
     attributes::{
-        Bitwise, ChecksumFlags, ChecksumType, Cmp, DataAttribute,
-        ExpressionAttribute, Expressions, Immediate, ListAttribute, Lookup,
-        Meta, MetaKey, Operator, Payload, Register, Verdict, VerdictAttribute,
+        Bitwise, ChecksumFlags, ChecksumType, Cmp, Ct, CtDirection, CtKey,
+        DataAttribute, ExpressionAttribute, Expressions, Immediate, Limit,
+        LimitFlags, LimitType, ListAttribute, Log, LogFlags, LogLevel, Lookup,
+        Meta, MetaKey, Operator, Payload, Register, Rt, RtKey, Verdict,
+        VerdictAttribute,
     },
     chain::{
         ChainAttribute, ChainFlags, ChainMessage, DevHookNumber, Hook,
