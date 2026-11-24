@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 use bitflags::bitflags;
+use netlink_packet_core::{append_bytes, EncodeError};
 use netlink_packet_core::{
-    emit_u16_be, emit_u32_be, parse_string, parse_u16_be, parse_u32_be,
+    append_u16_be, append_u32_be, parse_string, parse_u16_be, parse_u32_be,
     DecodeError, DefaultNla, ErrorContext as _, Nla, NlaBuffer, Parseable,
 };
 
@@ -118,16 +119,6 @@ pub enum Log {
 }
 
 impl Nla for Log {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::Group(_) | Self::QueueThreshold(_) => 2,
-            Self::Prefix(string) => string.len() + 1,
-            Self::Snaplen(_) | Self::Level(_) | Self::Flags(_) => 4,
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_LOG_UNSPEC,
@@ -141,26 +132,27 @@ impl Nla for Log {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
             Self::Group(value) | Self::QueueThreshold(value) => {
-                emit_u16_be(buffer, *value).unwrap()
+                append_u16_be(out, *value)
             }
             Self::Prefix(string) => {
-                buffer[..string.len()].copy_from_slice(string.as_bytes());
-                buffer[string.len()] = 0;
+                append_bytes(out, string.as_bytes());
+                out.push(0);
             }
-            Self::Snaplen(value) => emit_u32_be(buffer, *value).unwrap(),
-            Self::Level(level) => emit_u32_be(buffer, (*level).into()).unwrap(),
-            Self::Flags(flags) => emit_u32_be(buffer, flags.bits()).unwrap(),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Snaplen(value) => append_u32_be(out, *value),
+            Self::Level(level) => append_u32_be(out, (*level).into()),
+            Self::Flags(flags) => append_u32_be(out, flags.bits()),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for Log {
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for Log {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_LOG_UNSPEC => Self::Unspecified,

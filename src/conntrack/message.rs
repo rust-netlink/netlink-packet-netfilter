@@ -2,6 +2,7 @@
 
 use crate::conntrack::attributes::ConntrackAttribute;
 use crate::nlas::{default_nlas, parse_all_nlas};
+use netlink_packet_core::EncodeError;
 use netlink_packet_core::{
     DecodeError, DefaultNla, Emitable, Parseable, ParseableParametrized,
 };
@@ -67,38 +68,22 @@ impl ConntrackMessage {
 }
 
 impl Emitable for ConntrackMessage {
-    fn buffer_len(&self) -> usize {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             ConntrackMessage::New(attributes) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             ConntrackMessage::Get(attributes) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             ConntrackMessage::Delete(attributes) => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
             ConntrackMessage::Other { attributes, .. } => {
-                attributes.as_slice().buffer_len()
-            }
-        }
-    }
-
-    fn emit(&self, buffer: &mut [u8]) {
-        match self {
-            ConntrackMessage::New(attributes) => {
-                attributes.as_slice().emit(buffer)
-            }
-            ConntrackMessage::Get(attributes) => {
-                attributes.as_slice().emit(buffer)
-            }
-            ConntrackMessage::Delete(attributes) => {
-                attributes.as_slice().emit(buffer)
-            }
-            ConntrackMessage::Other { attributes, .. } => {
-                attributes.as_slice().emit(buffer)
+                attributes.as_slice().emit(out)?
             }
         };
+        Ok(())
     }
 }
 

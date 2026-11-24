@@ -6,6 +6,7 @@ use netlink_packet_core::{
 };
 
 use crate::conntrack::attributes::tcp_flags::TCPFlags;
+use netlink_packet_core::EncodeError;
 
 const CTA_PROTOINFO_TCP_STATE: u16 = 1;
 const CTA_PROTOINFO_TCP_WSCALE_ORIGINAL: u16 = 2;
@@ -24,17 +25,6 @@ pub enum ProtoInfoTCP {
     Other(DefaultNla),
 }
 impl Nla for ProtoInfoTCP {
-    fn value_len(&self) -> usize {
-        match self {
-            ProtoInfoTCP::State(attr) => size_of_val(attr),
-            ProtoInfoTCP::OriginalWindowScale(attr) => size_of_val(attr),
-            ProtoInfoTCP::ReplyWindowScale(attr) => size_of_val(attr),
-            ProtoInfoTCP::OriginalFlags(attr) => attr.buffer_len(),
-            ProtoInfoTCP::ReplyFlags(attr) => attr.buffer_len(),
-            ProtoInfoTCP::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             ProtoInfoTCP::State(_) => CTA_PROTOINFO_TCP_STATE,
@@ -48,21 +38,20 @@ impl Nla for ProtoInfoTCP {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
-            ProtoInfoTCP::State(attr) => buffer[0] = *attr,
-            ProtoInfoTCP::OriginalWindowScale(attr) => buffer[0] = *attr,
-            ProtoInfoTCP::ReplyWindowScale(attr) => buffer[0] = *attr,
-            ProtoInfoTCP::OriginalFlags(attr) => attr.emit(buffer),
-            ProtoInfoTCP::ReplyFlags(attr) => attr.emit(buffer),
-            ProtoInfoTCP::Other(attr) => attr.emit_value(buffer),
+            ProtoInfoTCP::State(attr) => out.push(*attr),
+            ProtoInfoTCP::OriginalWindowScale(attr) => out.push(*attr),
+            ProtoInfoTCP::ReplyWindowScale(attr) => out.push(*attr),
+            ProtoInfoTCP::OriginalFlags(attr) => attr.emit(out)?,
+            ProtoInfoTCP::ReplyFlags(attr) => attr.emit(out)?,
+            ProtoInfoTCP::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
-impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
-    for ProtoInfoTCP
-{
-    fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
+impl<'buffer> Parseable<NlaBuffer<'buffer>> for ProtoInfoTCP {
+    fn parse(buf: &NlaBuffer<'buffer>) -> Result<Self, DecodeError> {
         let kind = buf.kind();
         let payload = buf.value();
         let nla = match kind {

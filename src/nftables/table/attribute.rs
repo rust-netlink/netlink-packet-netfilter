@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    emit_u32_be, emit_u64_be, parse_string, parse_u32_be, parse_u64_be,
+    append_u32_be, append_u64_be, parse_string, parse_u32_be, parse_u64_be,
     DecodeError, DefaultNla, ErrorContext as _, Nla, NlaBuffer, Parseable,
 };
 
 use crate::nftables::table::TableFlags;
+use netlink_packet_core::{append_bytes, EncodeError};
 
 // Defined in Linux kernel: include/uapi/linux/netfilter/nf_tables.h
 const NFTA_TABLE_UNSPEC: u16 = 0;
@@ -34,17 +35,6 @@ pub enum TableAttribute {
 }
 
 impl Nla for TableAttribute {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::Name(string) => string.len() + 1,
-            Self::UserData(bytes) => bytes.len(),
-            Self::Flags(_) | Self::Use(_) | Self::Owner(_) => 4,
-            Self::Handle(_) => 8,
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_TABLE_UNSPEC,
@@ -58,30 +48,27 @@ impl Nla for TableAttribute {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
             Self::Name(string) => {
-                buffer[..string.len()].copy_from_slice(string.as_bytes());
-                buffer[string.len()] = 0;
+                append_bytes(out, string.as_bytes());
+                out.push(0);
             }
-            Self::UserData(bytes) => {
-                buffer[..bytes.len()].copy_from_slice(bytes.as_slice())
-            }
-            Self::Flags(flags) => emit_u32_be(buffer, flags.bits()).unwrap(),
+            Self::UserData(bytes) => append_bytes(out, bytes.as_slice()),
+            Self::Flags(flags) => append_u32_be(out, flags.bits()),
             Self::Use(value) | TableAttribute::Owner(value) => {
-                emit_u32_be(buffer, *value).unwrap()
+                append_u32_be(out, *value)
             }
-            Self::Handle(value) => emit_u64_be(buffer, *value).unwrap(),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Handle(value) => append_u64_be(out, *value),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
-    for TableAttribute
-{
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for TableAttribute {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_TABLE_UNSPEC => Self::Unspecified,

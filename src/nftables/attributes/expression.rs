@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+use netlink_packet_core::{append_bytes, EncodeError};
 use std::fmt::Debug;
 
 mod bitwise;
@@ -95,42 +96,24 @@ impl From<Expressions> for ListAttribute<ExpressionAttribute> {
 }
 
 impl Emitable for Expressions {
-    fn buffer_len(&self) -> usize {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
-            Self::Bitwise(attrs) => attrs.as_slice().buffer_len(),
-            Self::Cmp(attrs) => attrs.as_slice().buffer_len(),
-            Self::Ct(attrs) => attrs.as_slice().buffer_len(),
-            Self::Immediate(attrs) => attrs.as_slice().buffer_len(),
-            Self::Limit(attrs) => attrs.as_slice().buffer_len(),
-            Self::Log(attrs) => attrs.as_slice().buffer_len(),
-            Self::Lookup(attrs) => attrs.as_slice().buffer_len(),
-            Self::Meta(attrs) => attrs.as_slice().buffer_len(),
-            Self::Payload(attrs) => attrs.as_slice().buffer_len(),
-            Self::Rt(attrs) => attrs.as_slice().buffer_len(),
-            Self::Unknown(attrs) => attrs.as_slice().buffer_len(),
+            Self::Bitwise(attrs) => attrs.as_slice().emit(out)?,
+            Self::Cmp(attrs) => attrs.as_slice().emit(out)?,
+            Self::Ct(attrs) => attrs.as_slice().emit(out)?,
+            Self::Immediate(attrs) => attrs.as_slice().emit(out)?,
+            Self::Limit(attrs) => attrs.as_slice().emit(out)?,
+            Self::Log(attrs) => attrs.as_slice().emit(out)?,
+            Self::Lookup(attrs) => attrs.as_slice().emit(out)?,
+            Self::Meta(attrs) => attrs.as_slice().emit(out)?,
+            Self::Payload(attrs) => attrs.as_slice().emit(out)?,
+            Self::Rt(attrs) => attrs.as_slice().emit(out)?,
+            Self::Unknown(attrs) => attrs.as_slice().emit(out)?,
             Self::Other { attributes, .. } => {
-                attributes.as_slice().buffer_len()
+                attributes.as_slice().emit(out)?
             }
         }
-    }
-
-    fn emit(&self, buffer: &mut [u8]) {
-        match self {
-            Self::Bitwise(attrs) => attrs.as_slice().emit(buffer),
-            Self::Cmp(attrs) => attrs.as_slice().emit(buffer),
-            Self::Ct(attrs) => attrs.as_slice().emit(buffer),
-            Self::Immediate(attrs) => attrs.as_slice().emit(buffer),
-            Self::Limit(attrs) => attrs.as_slice().emit(buffer),
-            Self::Log(attrs) => attrs.as_slice().emit(buffer),
-            Self::Lookup(attrs) => attrs.as_slice().emit(buffer),
-            Self::Meta(attrs) => attrs.as_slice().emit(buffer),
-            Self::Payload(attrs) => attrs.as_slice().emit(buffer),
-            Self::Rt(attrs) => attrs.as_slice().emit(buffer),
-            Self::Unknown(attrs) => attrs.as_slice().emit(buffer),
-            Self::Other { attributes, .. } => {
-                attributes.as_slice().emit(buffer)
-            }
-        }
+        Ok(())
     }
 }
 
@@ -144,9 +127,7 @@ impl<T: AsRef<[u8]> + ?Sized + Debug> ParseableParametrized<T, Option<String>>
         Ok(match name {
             None => {
                 let mut nlas = vec![];
-                for nla in NlasIterator::new(buf) {
-                    let nla = nla
-                        .context(format!("invalid NFTA_EXPR_DATA {:?}", buf))?;
+                for nla in NlasIterator::new(buf)? {
                     nlas.push(DefaultNla::parse(&nla)?);
                 }
 
@@ -155,121 +136,77 @@ impl<T: AsRef<[u8]> + ?Sized + Debug> ParseableParametrized<T, Option<String>>
             Some(name) => match name.as_str() {
                 "bitwise" => {
                     let mut nlas = vec![];
-                    for nla in NlasIterator::new(buf) {
-                        let nla = nla.context(format!(
-                            "invalid NFTA_EXPR_DATA {:?}",
-                            buf
-                        ))?;
+                    for nla in NlasIterator::new(buf)? {
                         nlas.push(Bitwise::parse(&nla)?);
                     }
                     Self::Bitwise(nlas)
                 }
                 "cmp" => {
                     let mut nlas = vec![];
-                    for nla in NlasIterator::new(buf) {
-                        let nla = nla.context(format!(
-                            "invalid NFTA_EXPR_DATA {:?}",
-                            buf
-                        ))?;
+                    for nla in NlasIterator::new(buf)? {
                         nlas.push(Cmp::parse(&nla)?);
                     }
                     Self::Cmp(nlas)
                 }
                 "ct" => {
                     let mut nlas = vec![];
-                    for nla in NlasIterator::new(buf) {
-                        let nla = nla.context(format!(
-                            "invalid NFTA_EXPR_DATA {:?}",
-                            buf
-                        ))?;
+                    for nla in NlasIterator::new(buf)? {
                         nlas.push(Ct::parse(&nla)?);
                     }
                     Self::Ct(nlas)
                 }
                 "immediate" => {
                     let mut nlas = vec![];
-                    for nla in NlasIterator::new(buf) {
-                        let nla = nla.context(format!(
-                            "invalid NFTA_EXPR_DATA {:?}",
-                            buf
-                        ))?;
+                    for nla in NlasIterator::new(buf)? {
                         nlas.push(Immediate::parse(&nla)?);
                     }
                     Self::Immediate(nlas)
                 }
                 "limit" => {
                     let mut nlas = vec![];
-                    for nla in NlasIterator::new(buf) {
-                        let nla = nla.context(format!(
-                            "invalid NFTA_EXPR_DATA {:?}",
-                            buf
-                        ))?;
+                    for nla in NlasIterator::new(buf)? {
                         nlas.push(Limit::parse(&nla)?);
                     }
                     Self::Limit(nlas)
                 }
                 "log" => {
                     let mut nlas = vec![];
-                    for nla in NlasIterator::new(buf) {
-                        let nla = nla.context(format!(
-                            "invalid NFTA_EXPR_DATA {:?}",
-                            buf
-                        ))?;
+                    for nla in NlasIterator::new(buf)? {
                         nlas.push(Log::parse(&nla)?);
                     }
                     Self::Log(nlas)
                 }
                 "lookup" => {
                     let mut nlas = vec![];
-                    for nla in NlasIterator::new(buf) {
-                        let nla = nla.context(format!(
-                            "invalid NFTA_EXPR_DATA {:?}",
-                            buf
-                        ))?;
+                    for nla in NlasIterator::new(buf)? {
                         nlas.push(Lookup::parse(&nla)?);
                     }
                     Self::Lookup(nlas)
                 }
                 "meta" => {
                     let mut nlas = vec![];
-                    for nla in NlasIterator::new(buf) {
-                        let nla = nla.context(format!(
-                            "invalid NFTA_EXPR_DATA {:?}",
-                            buf
-                        ))?;
+                    for nla in NlasIterator::new(buf)? {
                         nlas.push(Meta::parse(&nla)?);
                     }
                     Self::Meta(nlas)
                 }
                 "payload" => {
                     let mut nlas = vec![];
-                    for nla in NlasIterator::new(buf) {
-                        let nla = nla.context(format!(
-                            "invalid NFTA_EXPR_DATA {:?}",
-                            buf
-                        ))?;
+                    for nla in NlasIterator::new(buf)? {
                         nlas.push(Payload::parse(&nla)?);
                     }
                     Self::Payload(nlas)
                 }
                 "rt" => {
                     let mut nlas = vec![];
-                    for nla in NlasIterator::new(buf) {
-                        let nla = nla.context(format!(
-                            "invalid NFTA_EXPR_DATA {:?}",
-                            buf
-                        ))?;
+                    for nla in NlasIterator::new(buf)? {
                         nlas.push(Rt::parse(&nla)?);
                     }
                     Self::Rt(nlas)
                 }
                 name => {
                     let mut nlas = vec![];
-                    for nla in NlasIterator::new(buf) {
-                        let nla = nla.context(format!(
-                            "invalid NFTA_EXPR_DATA {:?}",
-                            buf
-                        ))?;
+                    for nla in NlasIterator::new(buf)? {
                         nlas.push(DefaultNla::parse(&nla)?);
                     }
                     Self::Other {
@@ -283,15 +220,6 @@ impl<T: AsRef<[u8]> + ?Sized + Debug> ParseableParametrized<T, Option<String>>
 }
 
 impl Nla for ExpressionAttribute {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspec => 0,
-            Self::Name(string) => string.len() + 1,
-            Self::Data(exps) => exps.buffer_len(),
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspec => NFTA_EXPR_UNSPEC,
@@ -301,16 +229,17 @@ impl Nla for ExpressionAttribute {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspec => {}
             Self::Name(string) => {
-                buffer[..string.len()].copy_from_slice(string.as_bytes());
-                buffer[string.len()] = 0;
+                append_bytes(out, string.as_bytes());
+                out.push(0);
             }
-            Self::Data(exps) => exps.emit(buffer),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Data(exps) => exps.emit(out)?,
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 
     fn is_nested(&self) -> bool {
@@ -318,12 +247,11 @@ impl Nla for ExpressionAttribute {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized>
-    ParseableParametrized<NlaBuffer<&'a T>, Option<String>>
+impl<'a> ParseableParametrized<NlaBuffer<'a>, Option<String>>
     for ExpressionAttribute
 {
     fn parse_with_param(
-        buf: &NlaBuffer<&'a T>,
+        buf: &NlaBuffer<'a>,
         name: Option<String>,
     ) -> Result<Self, DecodeError> {
         let payload = buf.value();

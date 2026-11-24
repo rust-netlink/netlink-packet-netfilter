@@ -2,11 +2,12 @@
 
 use derive_more::{From, IsVariant};
 use netlink_packet_core::{
-    emit_u32_be, parse_u16_be, parse_u32_be, parse_u8, DecodeError, DefaultNla,
-    ErrorContext, Nla, NlaBuffer, Parseable,
+    append_u32_be, parse_u16_be, parse_u32_be, parse_u8, DecodeError,
+    DefaultNla, ErrorContext, Nla, NlaBuffer, Parseable,
 };
 
 use crate::nflog::nlas::config::{ConfigCmd, ConfigFlags, ConfigMode, Timeout};
+use netlink_packet_core::EncodeError;
 
 const NFULA_CFG_CMD: u16 = libc::NFULA_CFG_CMD as u16;
 const NFULA_CFG_FLAGS: u16 = libc::NFULA_CFG_FLAGS as u16;
@@ -30,18 +31,6 @@ pub enum ConfigNla {
 }
 
 impl Nla for ConfigNla {
-    fn value_len(&self) -> usize {
-        match self {
-            ConfigNla::Cmd(attr) => attr.value_len(),
-            ConfigNla::Mode(attr) => attr.value_len(),
-            ConfigNla::NlBufSiz(_) => 4,
-            ConfigNla::Timeout(attr) => attr.value_len(),
-            ConfigNla::QThresh(_) => 4,
-            ConfigNla::Flags(attr) => attr.value_len(),
-            ConfigNla::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             ConfigNla::Cmd(attr) => attr.kind(),
@@ -54,27 +43,26 @@ impl Nla for ConfigNla {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
-            ConfigNla::Cmd(attr) => attr.emit_value(buffer),
-            ConfigNla::Mode(attr) => attr.emit_value(buffer),
+            ConfigNla::Cmd(attr) => return attr.emit_value(out),
+            ConfigNla::Mode(attr) => return attr.emit_value(out),
             ConfigNla::NlBufSiz(buf_siz) => {
-                emit_u32_be(buffer, *buf_siz).unwrap();
+                append_u32_be(out, *buf_siz);
             }
-            ConfigNla::Timeout(attr) => attr.emit_value(buffer),
+            ConfigNla::Timeout(attr) => return attr.emit_value(out),
             ConfigNla::QThresh(q_thresh) => {
-                emit_u32_be(buffer, *q_thresh).unwrap();
+                append_u32_be(out, *q_thresh);
             }
-            ConfigNla::Flags(attr) => attr.emit_value(buffer),
-            ConfigNla::Other(attr) => attr.emit_value(buffer),
+            ConfigNla::Flags(attr) => return attr.emit_value(out),
+            ConfigNla::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
 
-impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
-    for ConfigNla
-{
-    fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
+impl<'buffer> Parseable<NlaBuffer<'buffer>> for ConfigNla {
+    fn parse(buf: &NlaBuffer<'buffer>) -> Result<Self, DecodeError> {
         let kind = buf.kind();
         let payload = buf.value();
         let nla = match kind {

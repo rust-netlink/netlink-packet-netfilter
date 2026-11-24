@@ -7,6 +7,7 @@ use netlink_packet_core::{
 use std::fmt::Debug;
 
 use crate::nftables::attributes::ExpressionAttribute;
+use netlink_packet_core::EncodeError;
 
 const NFTA_LIST_UNSPEC: u16 = 0;
 const NFTA_LIST_ELEM: u16 = 1;
@@ -21,14 +22,6 @@ pub enum ListAttribute<T = DefaultNla> {
 }
 
 impl<T: Nla> Nla for ListAttribute<T> {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspec => 0,
-            Self::Element(elems) => elems.as_slice().buffer_len(),
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspec => NFTA_LIST_UNSPEC,
@@ -37,33 +30,32 @@ impl<T: Nla> Nla for ListAttribute<T> {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspec => {}
-            Self::Element(elems) => elems.as_slice().emit(buffer),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Element(elems) => elems.as_slice().emit(out)?,
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
     fn is_nested(&self) -> bool {
         matches!(self, Self::Element(_)) || (self.kind() & NLA_F_NESTED) != 0
     }
 }
 
-impl<'a, B, T> Parseable<NlaBuffer<&'a B>> for ListAttribute<T>
+impl<'a, T> Parseable<NlaBuffer<'a>> for ListAttribute<T>
 where
-    B: AsRef<[u8]> + ?Sized,
-    for<'b> T: Parseable<NlaBuffer<&'b [u8]>>,
+    for<'b> T: Parseable<NlaBuffer<'b>>,
 {
-    fn parse(buf: &NlaBuffer<&'a B>) -> Result<Self, DecodeError> {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_LIST_UNSPEC => Self::Unspec,
             NFTA_LIST_ELEM => {
                 let error_msg = "invalid NFTA_LIST_ELEM";
                 let mut nlas = vec![];
-                for nla in NlasIterator::new(payload) {
-                    let nla = &nla.context(error_msg)?;
-                    let parsed = T::parse(nla).context(error_msg)?;
+                for nla in NlasIterator::new(payload)? {
+                    let parsed = T::parse(&nla).context(error_msg)?;
                     nlas.push(parsed);
                 }
                 Self::Element(nlas)
@@ -73,10 +65,8 @@ where
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
-    for ListAttribute<ExpressionAttribute>
-{
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for ListAttribute<ExpressionAttribute> {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_LIST_UNSPEC => Self::Unspec,
@@ -85,11 +75,13 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
                 let mut nlas = vec![];
                 let mut name = None;
 
-                for nla in NlasIterator::new(payload) {
-                    let nla = &nla.context(error_msg)?;
+                for nla in NlasIterator::new(payload)? {
                     let expression_attribute =
-                        ExpressionAttribute::parse_with_param(nla, name.take())
-                            .context(error_msg)?;
+                        ExpressionAttribute::parse_with_param(
+                            &nla,
+                            name.take(),
+                        )
+                        .context(error_msg)?;
                     if let ExpressionAttribute::Name(parsed_name) =
                         &expression_attribute
                     {
@@ -110,13 +102,11 @@ pub(crate) struct VecListAttribute<T>(pub(crate) Vec<ListAttribute<T>>);
 impl<T, B> Parseable<B> for VecListAttribute<T>
 where
     B: AsRef<[u8]> + Debug + ?Sized,
-    for<'b> T: Parseable<NlaBuffer<&'b [u8]>>,
+    for<'b> T: Parseable<NlaBuffer<'b>>,
 {
     fn parse(buf: &B) -> Result<Self, DecodeError> {
         let mut nlas = vec![];
-        for nla in NlasIterator::new(buf) {
-            let nla = nla
-                .context(format!("invalid generic list attribute {:?}", buf))?;
+        for nla in NlasIterator::new(buf)? {
             nlas.push(ListAttribute::parse(&nla)?);
         }
         Ok(Self(nlas))
@@ -128,9 +118,7 @@ impl<T: AsRef<[u8]> + Debug + ?Sized> Parseable<T>
 {
     fn parse(buf: &T) -> Result<Self, DecodeError> {
         let mut nlas = vec![];
-        for nla in NlasIterator::new(buf) {
-            let nla = nla
-                .context(format!("invalid generic list attribute {:?}", buf))?;
+        for nla in NlasIterator::new(buf)? {
             nlas.push(ListAttribute::parse(&nla)?);
         }
         Ok(Self(nlas))

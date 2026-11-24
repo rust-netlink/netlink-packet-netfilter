@@ -17,13 +17,11 @@ pub fn config_request(
 ) -> NetlinkMessage<NetfilterMessage> {
     let mut hdr = NetlinkHeader::default();
     hdr.flags = NLM_F_REQUEST | NLM_F_ACK;
-    let mut message = NetlinkMessage::new(
+    NetlinkMessage::new(
         hdr,
         NetlinkPayload::from(NetfilterMessage::new(
             NetfilterHeader::new(family, NFNETLINK_V0, group_num),
             ULogMessage::Config(nlas),
         )),
-    );
-    message.finalize();
-    message
+    )
 }

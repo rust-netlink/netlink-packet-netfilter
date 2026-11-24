@@ -8,7 +8,8 @@
 
 use std::time::Duration;
 
-use netlink_packet_core::{parse_ip, NetlinkMessage, NetlinkPayload};
+use libc::NETLINK_NETFILTER;
+use netlink_packet_core::{parse_ip, Emitable, NetlinkMessage, NetlinkPayload};
 use netlink_packet_netfilter::{
     nflog::{
         config_request, ConfigCmd, ConfigFlags, ConfigMode, PacketNla, Timeout,
@@ -16,7 +17,7 @@ use netlink_packet_netfilter::{
     },
     NetfilterMessage, NetfilterMessageInner, NetfilterProtoFamily,
 };
-use netlink_sys::{constants::NETLINK_NETFILTER, Socket};
+use netlink_sys::Socket;
 
 fn get_packet_nlas(message: &NetlinkMessage<NetfilterMessage>) -> &[PacketNla] {
     if let NetlinkPayload::InnerMessage(NetfilterMessage {
@@ -34,7 +35,7 @@ fn main() {
     let mut receive_buffer = vec![0; 4096];
 
     // First, we bind the socket
-    let mut socket = Socket::new(NETLINK_NETFILTER).unwrap();
+    let socket = Socket::new(NETLINK_NETFILTER as isize).unwrap();
     socket.bind_auto().unwrap();
 
     // Then we issue the PfBind command
@@ -43,8 +44,8 @@ fn main() {
         0,
         vec![ConfigCmd::PfBind.into()],
     );
-    let mut buf = vec![0; packet.header.length as usize];
-    packet.serialize(&mut buf[..]);
+    let mut buf = Vec::new();
+    packet.emit(&mut buf).unwrap();
     println!(">>> {:?}", packet);
     socket.send(&buf[..], 0).unwrap();
 
@@ -72,8 +73,8 @@ fn main() {
             timeout.into(),
         ],
     );
-    let mut buf = vec![0; packet.header.length as usize];
-    packet.serialize(&mut buf[..]);
+    let mut buf = Vec::new();
+    packet.emit(&mut buf).unwrap();
     println!(">>> {:?}", packet);
     socket.send(&buf[..], 0).unwrap();
 

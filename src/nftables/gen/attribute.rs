@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 
+use netlink_packet_core::{append_bytes, EncodeError};
 use netlink_packet_core::{
-    emit_u32_be, parse_string, parse_u32_be, DecodeError, DefaultNla,
+    append_u32_be, parse_string, parse_u32_be, DecodeError, DefaultNla,
     ErrorContext as _, Nla, NlaBuffer, Parseable,
 };
 
@@ -23,15 +24,6 @@ pub enum GenAttribute {
 }
 
 impl Nla for GenAttribute {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::Id(_) | GenAttribute::ProcPid(_) => 4,
-            Self::ProcName(string) => string.len() + 1,
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_GEN_UNSPEC,
@@ -42,23 +34,24 @@ impl Nla for GenAttribute {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
             Self::Id(value) | GenAttribute::ProcPid(value) => {
-                emit_u32_be(buffer, *value).unwrap()
+                append_u32_be(out, *value)
             }
             Self::ProcName(string) => {
-                buffer[..string.len()].copy_from_slice(string.as_bytes());
-                buffer[string.len()] = 0;
+                append_bytes(out, string.as_bytes());
+                out.push(0);
             }
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for GenAttribute {
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for GenAttribute {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_GEN_UNSPEC => Self::Unspecified,

@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    emit_u32_be, parse_string, parse_u32_be, DecodeError, DefaultNla, Emitable,
-    ErrorContext as _, Nla, NlaBuffer, Parseable, NLA_F_NESTED,
+    append_u32_be, parse_string, parse_u32_be, DecodeError, DefaultNla,
+    Emitable, ErrorContext as _, Nla, NlaBuffer, Parseable, NLA_F_NESTED,
 };
 
 use crate::nftables::{
     attributes::{list::VecListAttribute, ListAttribute},
     set_element::SetElementAttribute,
 };
+use netlink_packet_core::{append_bytes, EncodeError};
 
 const NFTA_SET_ELEM_LIST_UNSPEC: u16 = 0;
 const NFTA_SET_ELEM_LIST_TABLE: u16 = 1;
@@ -31,16 +32,6 @@ pub enum SetElementList {
 }
 
 impl Nla for SetElementList {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::Table(string) | Self::Set(string) => string.len() + 1,
-            Self::Elements(elems) => elems.as_slice().buffer_len(),
-            Self::SetId(_) => 4,
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_SET_ELEM_LIST_UNSPEC,
@@ -52,17 +43,18 @@ impl Nla for SetElementList {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
             Self::Table(string) | Self::Set(string) => {
-                buffer[..string.len()].copy_from_slice(string.as_bytes());
-                buffer[string.len()] = 0;
+                append_bytes(out, string.as_bytes());
+                out.push(0);
             }
-            Self::Elements(elems) => elems.as_slice().emit(buffer),
-            Self::SetId(value) => emit_u32_be(buffer, *value).unwrap(),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Elements(elems) => elems.as_slice().emit(out)?,
+            Self::SetId(value) => append_u32_be(out, *value),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 
     fn is_nested(&self) -> bool {
@@ -70,10 +62,8 @@ impl Nla for SetElementList {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
-    for SetElementList
-{
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for SetElementList {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_SET_ELEM_LIST_UNSPEC => Self::Unspecified,

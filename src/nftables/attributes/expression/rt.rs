@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
+use netlink_packet_core::EncodeError;
 use netlink_packet_core::{
-    emit_u32_be, parse_u32_be, DecodeError, DefaultNla, ErrorContext as _, Nla,
-    NlaBuffer, Parseable,
+    append_u32_be, parse_u32_be, DecodeError, DefaultNla, ErrorContext as _,
+    Nla, NlaBuffer, Parseable,
 };
 
 use crate::nftables::attributes::expression::Register;
@@ -71,14 +72,6 @@ pub enum Rt {
 }
 
 impl Nla for Rt {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::DestinationRegister(_) | Self::Key(_) => 4,
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_RT_UNSPEC,
@@ -88,20 +81,19 @@ impl Nla for Rt {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
-            Self::DestinationRegister(reg) => {
-                emit_u32_be(buffer, (*reg).into()).unwrap()
-            }
-            Self::Key(key) => emit_u32_be(buffer, (*key).into()).unwrap(),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::DestinationRegister(reg) => append_u32_be(out, (*reg).into()),
+            Self::Key(key) => append_u32_be(out, (*key).into()),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for Rt {
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for Rt {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_RT_UNSPEC => Self::Unspecified,

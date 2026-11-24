@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    emit_u32_be, emit_u64_be, parse_string, parse_u32_be, parse_u64_be,
+    append_u32_be, append_u64_be, parse_string, parse_u32_be, parse_u64_be,
     DecodeError, DefaultNla, Emitable as _, ErrorContext as _, Nla, NlaBuffer,
     NlasIterator, Parseable, NLA_F_NESTED,
 };
@@ -9,6 +9,7 @@ use netlink_packet_core::{
 use crate::nftables::attributes::{
     list::VecListAttribute, ExpressionAttribute, ListAttribute,
 };
+use netlink_packet_core::{append_bytes, EncodeError};
 
 const NFTA_RULE_UNSPEC: u16 = 0;
 const NFTA_RULE_TABLE: u16 = 1;
@@ -53,19 +54,6 @@ pub enum RuleAttribute {
 }
 
 impl Nla for RuleAttribute {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::Table(string) | Self::Chain(string) => string.len() + 1,
-            Self::Handle(_) | Self::Position(_) => 8,
-            Self::Expressions(attrs) => attrs.as_slice().buffer_len(),
-            Self::Compat(attrs) => attrs.as_slice().buffer_len(),
-            Self::UserData(bytes) => bytes.len(),
-            Self::Id(_) | Self::PositionId(_) | Self::ChainId(_) => 4,
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_RULE_UNSPEC,
@@ -83,26 +71,25 @@ impl Nla for RuleAttribute {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
             Self::Table(string) | Self::Chain(string) => {
-                buffer[..string.len()].copy_from_slice(string.as_bytes());
-                buffer[string.len()] = 0;
+                append_bytes(out, string.as_bytes());
+                out.push(0);
             }
             Self::Handle(value) | Self::Position(value) => {
-                emit_u64_be(buffer, *value).unwrap()
+                append_u64_be(out, *value)
             }
-            Self::Expressions(attrs) => attrs.as_slice().emit(buffer),
-            Self::Compat(attrs) => attrs.as_slice().emit(buffer),
-            Self::UserData(bytes) => {
-                buffer[..bytes.len()].copy_from_slice(bytes.as_slice())
-            }
+            Self::Expressions(attrs) => attrs.as_slice().emit(out)?,
+            Self::Compat(attrs) => attrs.as_slice().emit(out)?,
+            Self::UserData(bytes) => append_bytes(out, bytes.as_slice()),
             Self::Id(value)
             | Self::PositionId(value)
-            | Self::ChainId(value) => emit_u32_be(buffer, *value).unwrap(),
-            Self::Other(attr) => attr.emit_value(buffer),
+            | Self::ChainId(value) => append_u32_be(out, *value),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 
     fn is_nested(&self) -> bool {
@@ -111,10 +98,8 @@ impl Nla for RuleAttribute {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
-    for RuleAttribute
-{
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for RuleAttribute {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_RULE_UNSPEC => Self::Unspecified,
@@ -137,11 +122,7 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>>
             ),
             NFTA_RULE_COMPAT => {
                 let mut nlas = vec![];
-                for nla in NlasIterator::new(payload) {
-                    let nla = nla.context(format!(
-                        "invalid NFTA_RULE_COMPAT payload {:?}",
-                        payload
-                    ))?;
+                for nla in NlasIterator::new(payload)? {
                     nlas.push(DefaultNla::parse(&nla)?);
                 }
                 Self::Compat(nlas)

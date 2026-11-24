@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 
+use netlink_packet_core::EncodeError;
 use netlink_packet_core::{
-    emit_u32_be, parse_u32_be, parse_u8, DecodeError, DefaultNla,
+    append_u32_be, parse_u32_be, parse_u8, DecodeError, DefaultNla,
     ErrorContext as _, Nla, NlaBuffer, Parseable,
 };
 
@@ -196,17 +197,6 @@ pub enum Ct {
 }
 
 impl Nla for Ct {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::DestinationRegister(_)
-            | Self::Key(_)
-            | Self::SourceRegister(_) => 4,
-            Self::Direction(_) => 1,
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_CT_UNSPEC,
@@ -218,21 +208,22 @@ impl Nla for Ct {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
             Self::DestinationRegister(reg) | Self::SourceRegister(reg) => {
-                emit_u32_be(buffer, (*reg).into()).unwrap()
+                append_u32_be(out, (*reg).into())
             }
-            Self::Key(key) => emit_u32_be(buffer, (*key).into()).unwrap(),
-            Self::Direction(dir) => buffer[0] = (*dir).into(),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Key(key) => append_u32_be(out, (*key).into()),
+            Self::Direction(dir) => out.push((*dir).into()),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for Ct {
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for Ct {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_CT_UNSPEC => Self::Unspecified,

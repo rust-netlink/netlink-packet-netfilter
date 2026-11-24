@@ -6,6 +6,7 @@ use netlink_packet_core::{
 
 use crate::nflog::{ConfigNla, PacketNla};
 use crate::nlas::parse_all_nlas;
+use netlink_packet_core::EncodeError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[non_exhaustive]
@@ -60,20 +61,13 @@ impl ULogMessage {
 }
 
 impl Emitable for ULogMessage {
-    fn buffer_len(&self) -> usize {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
-            ULogMessage::Config(nlas) => nlas.as_slice().buffer_len(),
-            ULogMessage::Packet(nlas) => nlas.as_slice().buffer_len(),
-            ULogMessage::Other { nlas, .. } => nlas.as_slice().buffer_len(),
-        }
-    }
-
-    fn emit(&self, buffer: &mut [u8]) {
-        match self {
-            ULogMessage::Config(nlas) => nlas.as_slice().emit(buffer),
-            ULogMessage::Packet(nlas) => nlas.as_slice().emit(buffer),
-            ULogMessage::Other { nlas, .. } => nlas.as_slice().emit(buffer),
+            ULogMessage::Config(nlas) => nlas.as_slice().emit(out)?,
+            ULogMessage::Packet(nlas) => nlas.as_slice().emit(out)?,
+            ULogMessage::Other { nlas, .. } => nlas.as_slice().emit(out)?,
         };
+        Ok(())
     }
 }
 

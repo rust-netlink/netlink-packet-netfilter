@@ -4,13 +4,14 @@ use std::ffi::{CStr, CString};
 
 use derive_more::{From, IsVariant};
 use netlink_packet_core::{
-    emit_u16_be, emit_u32_be, parse_u16_be, parse_u32_be, DecodeError,
+    append_u16_be, append_u32_be, parse_u16_be, parse_u32_be, DecodeError,
     DefaultNla, ErrorContext, Nla, NlaBuffer, Parseable,
 };
 
 use crate::nflog::nlas::packet::{
     hw_addr::HwAddr, packet_hdr::PacketHdr, timestamp::TimeStamp,
 };
+use netlink_packet_core::{append_bytes, EncodeError};
 
 const NFULA_GID: u16 = libc::NFULA_GID as u16;
 const NFULA_HWADDR: u16 = libc::NFULA_HWADDR as u16;
@@ -58,29 +59,6 @@ pub enum PacketNla {
 }
 
 impl Nla for PacketNla {
-    fn value_len(&self) -> usize {
-        match self {
-            PacketNla::PacketHdr(attr) => attr.value_len(),
-            PacketNla::Mark(_) => 4,
-            PacketNla::Timestamp(attr) => attr.value_len(),
-            PacketNla::IfIndexInDev(_) => 4,
-            PacketNla::IfIndexOutDev(_) => 4,
-            PacketNla::IfIndexPhysInDev(_) => 4,
-            PacketNla::IfIndexPhysOutDev(_) => 4,
-            PacketNla::HwAddr(attr) => attr.value_len(),
-            PacketNla::Payload(vec) => vec.len(),
-            PacketNla::Prefix(cstring) => cstring.as_bytes_with_nul().len(),
-            PacketNla::Uid(_) => 4,
-            PacketNla::Seq(_) => 4,
-            PacketNla::SeqGlobal(_) => 4,
-            PacketNla::Gid(_) => 4,
-            PacketNla::HwType(_) => 2,
-            PacketNla::HwHeader(vec) => vec.len(),
-            PacketNla::HwHeaderLen(_) => 2,
-            PacketNla::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             PacketNla::PacketHdr(attr) => attr.kind(),
@@ -104,58 +82,57 @@ impl Nla for PacketNla {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
-            PacketNla::PacketHdr(attr) => attr.emit_value(buffer),
+            PacketNla::PacketHdr(attr) => return attr.emit_value(out),
             PacketNla::Mark(value) => {
-                emit_u32_be(buffer, *value).unwrap();
+                append_u32_be(out, *value);
             }
-            PacketNla::Timestamp(attr) => attr.emit_value(buffer),
+            PacketNla::Timestamp(attr) => return attr.emit_value(out),
             PacketNla::IfIndexInDev(value) => {
-                emit_u32_be(buffer, *value).unwrap();
+                append_u32_be(out, *value);
             }
             PacketNla::IfIndexOutDev(value) => {
-                emit_u32_be(buffer, *value).unwrap();
+                append_u32_be(out, *value);
             }
             PacketNla::IfIndexPhysInDev(value) => {
-                emit_u32_be(buffer, *value).unwrap();
+                append_u32_be(out, *value);
             }
             PacketNla::IfIndexPhysOutDev(value) => {
-                emit_u32_be(buffer, *value).unwrap();
+                append_u32_be(out, *value);
             }
-            PacketNla::HwAddr(attr) => attr.emit_value(buffer),
-            PacketNla::Payload(vec) => buffer.copy_from_slice(vec),
+            PacketNla::HwAddr(attr) => return attr.emit_value(out),
+            PacketNla::Payload(vec) => append_bytes(out, vec),
             PacketNla::Prefix(cstring) => {
-                buffer.copy_from_slice(cstring.as_bytes_with_nul())
+                append_bytes(out, cstring.as_bytes_with_nul())
             }
             PacketNla::Uid(value) => {
-                emit_u32_be(buffer, *value).unwrap();
+                append_u32_be(out, *value);
             }
             PacketNla::Seq(value) => {
-                emit_u32_be(buffer, *value).unwrap();
+                append_u32_be(out, *value);
             }
             PacketNla::SeqGlobal(value) => {
-                emit_u32_be(buffer, *value).unwrap();
+                append_u32_be(out, *value);
             }
             PacketNla::Gid(value) => {
-                emit_u32_be(buffer, *value).unwrap();
+                append_u32_be(out, *value);
             }
             PacketNla::HwType(value) => {
-                emit_u16_be(buffer, *value).unwrap();
+                append_u16_be(out, *value);
             }
-            PacketNla::HwHeader(vec) => buffer.copy_from_slice(vec),
+            PacketNla::HwHeader(vec) => append_bytes(out, vec),
             PacketNla::HwHeaderLen(value) => {
-                emit_u16_be(buffer, *value).unwrap();
+                append_u16_be(out, *value);
             }
-            PacketNla::Other(attr) => attr.emit_value(buffer),
+            PacketNla::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
 
-impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
-    for PacketNla
-{
-    fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
+impl<'buffer> Parseable<NlaBuffer<'buffer>> for PacketNla {
+    fn parse(buf: &NlaBuffer<'buffer>) -> Result<Self, DecodeError> {
         let kind = buf.kind();
         let payload = buf.value();
         let nla = match kind {

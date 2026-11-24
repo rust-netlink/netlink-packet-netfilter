@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-use std::{convert::TryInto, mem::size_of, time::Duration};
+use std::{convert::TryInto, time::Duration};
 
-use netlink_packet_core::{emit_u32_be, Nla};
+use netlink_packet_core::EncodeError;
+use netlink_packet_core::{append_u32_be, Nla};
 
 const NFULA_CFG_TIMEOUT: u16 = libc::NFULA_CFG_TIMEOUT as u16;
 
@@ -26,15 +27,12 @@ impl From<Duration> for Timeout {
 }
 
 impl Nla for Timeout {
-    fn value_len(&self) -> usize {
-        size_of::<u32>()
-    }
-
     fn kind(&self) -> u16 {
         NFULA_CFG_TIMEOUT
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
-        emit_u32_be(buffer, self.hundredth).unwrap();
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
+        append_u32_be(out, self.hundredth);
+        Ok(())
     }
 }

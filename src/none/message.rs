@@ -5,6 +5,7 @@ use netlink_packet_core::{
 };
 
 use crate::nlas::default_nlas;
+use netlink_packet_core::EncodeError;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[non_exhaustive]
@@ -60,22 +61,14 @@ impl ControlMessage {
 }
 
 impl Emitable for ControlMessage {
-    fn buffer_len(&self) -> usize {
-        match self {
-            Self::BatchBegin | Self::BatchEnd => 0,
-            Self::Other { attributes, .. } => {
-                attributes.as_slice().buffer_len()
-            }
-        }
-    }
-
-    fn emit(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::BatchBegin | Self::BatchEnd => {}
             Self::Other { attributes, .. } => {
-                attributes.as_slice().emit(buffer)
+                attributes.as_slice().emit(out)?
             }
         }
+        Ok(())
     }
 }
 

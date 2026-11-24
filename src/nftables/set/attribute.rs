@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 use netlink_packet_core::{
-    emit_u32_be, emit_u64_be, parse_string, parse_u32_be, parse_u64_be,
+    append_u32_be, append_u64_be, parse_string, parse_u32_be, parse_u64_be,
     DecodeError, DefaultNla, Emitable, ErrorContext as _, Nla, NlaBuffer,
     Parseable, ParseableParametrized, NLA_F_NESTED,
 };
@@ -10,6 +10,7 @@ use crate::nftables::{
     attributes::{list::VecListAttribute, ExpressionAttribute, ListAttribute},
     set::{description::VecSetDescription, SetDescription, SetFlags},
 };
+use netlink_packet_core::{append_bytes, EncodeError};
 
 // Defined in Linux kernel: include/uapi/linux/netfilter/nf_tables.h
 const NFTA_SET_UNSEPC: u16 = 0;
@@ -76,31 +77,6 @@ pub enum SetAttribute {
 }
 
 impl Nla for SetAttribute {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::Table(string) | Self::Name(string) | Self::Type(string) => {
-                string.len() + 1
-            }
-            Self::UserData(bytes) => bytes.len(),
-            Self::Flags(_)
-            | Self::KeyType(_)
-            | Self::KeyLen(_)
-            | Self::DataType(_)
-            | Self::DataLen(_)
-            | Self::Policy(_)
-            | Self::Id(_)
-            | Self::GarbageCollectionInterval(_)
-            | Self::ObjectType(_)
-            | Self::Count(_) => 4,
-            Self::Timeout(_) | Self::Handle(_) => 8,
-            Self::Description(attr) => attr.as_slice().buffer_len(),
-            Self::Expression(ex) => ex.buffer_len(),
-            Self::ListExpressions(exs) => exs.as_slice().buffer_len(),
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_SET_UNSEPC,
@@ -127,17 +103,15 @@ impl Nla for SetAttribute {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
             Self::Table(string) | Self::Name(string) | Self::Type(string) => {
-                buffer[..string.len()].copy_from_slice(string.as_bytes());
-                buffer[string.len()] = 0;
+                append_bytes(out, string.as_bytes());
+                out.push(0);
             }
-            Self::UserData(bytes) => {
-                buffer[..bytes.len()].copy_from_slice(bytes.as_slice())
-            }
-            Self::Flags(bits) => emit_u32_be(buffer, bits.bits()).unwrap(),
+            Self::UserData(bytes) => append_bytes(out, bytes.as_slice()),
+            Self::Flags(bits) => append_u32_be(out, bits.bits()),
             Self::KeyType(value)
             | Self::KeyLen(value)
             | Self::DataType(value)
@@ -146,15 +120,16 @@ impl Nla for SetAttribute {
             | Self::Id(value)
             | Self::GarbageCollectionInterval(value)
             | Self::ObjectType(value)
-            | Self::Count(value) => emit_u32_be(buffer, *value).unwrap(),
+            | Self::Count(value) => append_u32_be(out, *value),
             Self::Timeout(value) | Self::Handle(value) => {
-                emit_u64_be(buffer, *value).unwrap()
+                append_u64_be(out, *value)
             }
-            Self::Description(desc) => desc.as_slice().emit(buffer),
-            Self::Expression(ex) => ex.emit(buffer),
-            Self::ListExpressions(exps) => exps.as_slice().emit(buffer),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Description(desc) => desc.as_slice().emit(out)?,
+            Self::Expression(ex) => ex.emit(out)?,
+            Self::ListExpressions(exps) => exps.as_slice().emit(out)?,
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 
     fn is_nested(&self) -> bool {
@@ -167,8 +142,8 @@ impl Nla for SetAttribute {
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for SetAttribute {
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for SetAttribute {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_SET_UNSEPC => Self::Unspecified,
@@ -230,7 +205,7 @@ impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for SetAttribute {
             ),
             NFTA_SET_EXPR => Self::Expression(
                 ExpressionAttribute::parse_with_param(
-                    &NlaBuffer::new(payload),
+                    &NlaBuffer::new(payload)?,
                     None, /* FIXME: Figure out how the legacy behavior
                            * determined the name */
                 )

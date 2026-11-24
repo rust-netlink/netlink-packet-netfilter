@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
+use netlink_packet_core::EncodeError;
 use netlink_packet_core::{
-    emit_u16_be, parse_u16_be, parse_u8, DecodeError, DefaultNla, ErrorContext,
-    Nla, NlaBuffer, Parseable,
+    append_u16_be, parse_u16_be, parse_u8, DecodeError, DefaultNla,
+    ErrorContext, Nla, NlaBuffer, Parseable,
 };
 
 const IPPROTO_ICMP: u8 = 1;
@@ -86,15 +87,6 @@ pub enum ProtoTuple {
 }
 
 impl Nla for ProtoTuple {
-    fn value_len(&self) -> usize {
-        match self {
-            ProtoTuple::Protocol(_) => size_of::<u8>(),
-            ProtoTuple::SourcePort(attr) => size_of_val(attr),
-            ProtoTuple::DestinationPort(attr) => size_of_val(attr),
-            ProtoTuple::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             ProtoTuple::Protocol(_) => CTA_PROTO_NUM,
@@ -104,22 +96,19 @@ impl Nla for ProtoTuple {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
-            ProtoTuple::Protocol(attr) => buffer[0] = (*attr).into(),
-            ProtoTuple::SourcePort(attr) => emit_u16_be(buffer, *attr).unwrap(),
-            ProtoTuple::DestinationPort(attr) => {
-                emit_u16_be(buffer, *attr).unwrap()
-            }
-            ProtoTuple::Other(attr) => attr.emit_value(buffer),
+            ProtoTuple::Protocol(attr) => out.push((*attr).into()),
+            ProtoTuple::SourcePort(attr) => append_u16_be(out, *attr),
+            ProtoTuple::DestinationPort(attr) => append_u16_be(out, *attr),
+            ProtoTuple::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
 
-impl<'buffer, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'buffer T>>
-    for ProtoTuple
-{
-    fn parse(buf: &NlaBuffer<&'buffer T>) -> Result<Self, DecodeError> {
+impl<'buffer> Parseable<NlaBuffer<'buffer>> for ProtoTuple {
+    fn parse(buf: &NlaBuffer<'buffer>) -> Result<Self, DecodeError> {
         let kind = buf.kind();
         let payload = buf.value();
         let nla = match kind {

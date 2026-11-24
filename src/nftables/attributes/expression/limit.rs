@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 use bitflags::bitflags;
+use netlink_packet_core::EncodeError;
 use netlink_packet_core::{
-    emit_u32_be, emit_u64_be, parse_u32_be, parse_u64_be, DecodeError,
+    append_u32_be, append_u64_be, parse_u32_be, parse_u64_be, DecodeError,
     DefaultNla, ErrorContext as _, Nla, NlaBuffer, Parseable,
 };
 
@@ -75,15 +76,6 @@ pub enum Limit {
 }
 
 impl Nla for Limit {
-    fn value_len(&self) -> usize {
-        match self {
-            Self::Unspecified => 0,
-            Self::Rate(_) | Self::Unit(_) => 8,
-            Self::Burst(_) | Self::Type(_) | Self::Flags(_) => 4,
-            Self::Other(attr) => attr.value_len(),
-        }
-    }
-
     fn kind(&self) -> u16 {
         match self {
             Self::Unspecified => NFTA_LIMIT_UNSPEC,
@@ -96,24 +88,21 @@ impl Nla for Limit {
         }
     }
 
-    fn emit_value(&self, buffer: &mut [u8]) {
+    fn emit_value(&self, out: &mut Vec<u8>) -> Result<(), EncodeError> {
         match self {
             Self::Unspecified => {}
-            Self::Rate(value) | Self::Unit(value) => {
-                emit_u64_be(buffer, *value).unwrap()
-            }
-            Self::Burst(value) => emit_u32_be(buffer, *value).unwrap(),
-            Self::Type(limit_type) => {
-                emit_u32_be(buffer, (*limit_type).into()).unwrap()
-            }
-            Self::Flags(flags) => emit_u32_be(buffer, flags.bits()).unwrap(),
-            Self::Other(attr) => attr.emit_value(buffer),
+            Self::Rate(value) | Self::Unit(value) => append_u64_be(out, *value),
+            Self::Burst(value) => append_u32_be(out, *value),
+            Self::Type(limit_type) => append_u32_be(out, (*limit_type).into()),
+            Self::Flags(flags) => append_u32_be(out, flags.bits()),
+            Self::Other(attr) => return attr.emit_value(out),
         }
+        Ok(())
     }
 }
 
-impl<'a, T: AsRef<[u8]> + ?Sized> Parseable<NlaBuffer<&'a T>> for Limit {
-    fn parse(buf: &NlaBuffer<&'a T>) -> Result<Self, DecodeError> {
+impl<'a> Parseable<NlaBuffer<'a>> for Limit {
+    fn parse(buf: &NlaBuffer<'a>) -> Result<Self, DecodeError> {
         let payload = buf.value();
         Ok(match buf.kind() {
             NFTA_LIMIT_UNSPEC => Self::Unspecified,
