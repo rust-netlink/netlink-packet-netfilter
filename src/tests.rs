@@ -2,7 +2,7 @@
 
 use std::net::IpAddr;
 
-use netlink_packet_core::{Emitable, ParseableParametrized};
+use netlink_packet_core::{DefaultNla, Emitable, NLA_F_NESTED, Nla, ParseableParametrized};
 
 use crate::{
     conntrack::{
@@ -441,6 +441,39 @@ fn test_new_conntrack() {
     let message_type = ((u8::from(NetfilterSubsystem::Conntrack) as u16) << 8)
         | (u8::from(ConntrackMessageType::New) as u16);
     // Check if the deserialization was correct
+    assert_eq!(
+        NetfilterMessage::parse_with_param(&raw, message_type).unwrap(),
+        expected
+    );
+}
+
+#[test]
+fn test_nested_in_other_conntrack_attr() {
+    let raw = vec![
+        0x02, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x19, 0x80, 0x08, 0x00, 0x01, 0x00,
+        0x00, 0x01, 0x02, 0x03,
+    ];
+
+    let inner_nla = DefaultNla::new(1, vec![0x0, 0x1, 0x2, 0x3]);
+    let mut nested_buf = Vec::new();
+    inner_nla.emit(&mut nested_buf).unwrap();
+
+    let nla = DefaultNla::new(NLA_F_NESTED | 0x19, nested_buf);
+    let attributes = vec![ConntrackAttribute::Other(nla)];
+
+    let expected = NetfilterMessage::new(
+        NetfilterHeader::new(NetfilterProtoFamily::IPv4, 0, 0),
+        ConntrackMessage::Delete(attributes)
+    );
+
+    let mut buffer = Vec::new();
+    expected.emit(&mut buffer).unwrap();
+
+    assert_eq!(buffer, raw);
+
+    let message_type = ((u8::from(NetfilterSubsystem::Conntrack) as u16) << 8)
+        | (u8::from(ConntrackMessageType::Delete) as u16);
+
     assert_eq!(
         NetfilterMessage::parse_with_param(&raw, message_type).unwrap(),
         expected

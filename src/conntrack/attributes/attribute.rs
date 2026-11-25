@@ -74,7 +74,7 @@ impl Nla for ConntrackAttribute {
             ConntrackAttribute::CtaTupleOrig(_)
                 | ConntrackAttribute::CtaTupleReply(_)
                 | ConntrackAttribute::CtaProtoInfo(_)
-        )
+        ) || matches!(self, ConntrackAttribute::Other(attr) if attr.is_nested())
     }
 }
 
